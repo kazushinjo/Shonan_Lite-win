@@ -475,7 +475,14 @@ class AfcScreen(SettingsSubScreen):
         self._scanning = True
         self.status_label.setText(tr("検索中...", "Searching..."))
         self.search_btn.setText(tr("検索停止", "Stop Search"))
-        if settings.use_on_device_demod and not self.main_window.tx_controller.is_running():
+        if settings.use_on_device_demod and self.main_window.tx_controller.is_running():
+            # ★検索が管理する送信として状態を揃えるため、既存の送信を一旦止めてから
+            # 検索用に送信をやり直す(周波数・設定を検索開始時点のものへ確実に合わせる
+            # ため)。停止は非同期なので、実際に止まるまでポーリングする。
+            self._tx_started_by_scan = True
+            self.main_window.tx_controller.stop()
+            QtCore.QTimer.singleShot(100, self._start_tx_after_stop_for_scan)
+        elif settings.use_on_device_demod:
             self.main_window.tx_controller.start(settings)
             self._tx_started_by_scan = True
             # ★TX起動直後は送信がまだ安定していないため、送信開始から3秒待って
@@ -483,6 +490,17 @@ class AfcScreen(SettingsSubScreen):
             QtCore.QTimer.singleShot(3000, self._start_timer_if_still_scanning)
         else:
             self.timer.start(STEP_INTERVAL_MS)
+
+    def _start_tx_after_stop_for_scan(self) -> None:
+        # ★「検索停止」が押されていたら何もしない。
+        if not self._scanning:
+            return
+        if self.main_window.tx_controller.is_running():
+            # まだ停止処理中。止まるまで100msごとに確認する。
+            QtCore.QTimer.singleShot(100, self._start_tx_after_stop_for_scan)
+            return
+        self.main_window.tx_controller.start(self.main_window.settings)
+        QtCore.QTimer.singleShot(3000, self._start_timer_if_still_scanning)
 
     def _start_timer_if_still_scanning(self) -> None:
         # ★3秒の待機中に「検索停止」が押されていた場合は何もしない。
