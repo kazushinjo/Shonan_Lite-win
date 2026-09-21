@@ -16,12 +16,9 @@ WARMUP_MSはSSH接続+pluto_dvb起動が安定するまでの猶予。
 from __future__ import annotations
 
 import copy
-import time
-import subprocess
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import platform_compat
 from backend import check_pluto_connection
 from widgets import SettingsSubScreen
 from i18n import tr
@@ -29,7 +26,7 @@ from i18n import tr
 TX_SECONDS = 8
 RX_SECONDS = 8
 CAMERA_AUDIO_SECONDS = 8
-WARMUP_MS = 2500
+WARMUP_MS = 4000
 INTER_PHASE_DELAY_MS = 1500
 
 
@@ -154,15 +151,6 @@ class TestEquipmentScreen(SettingsSubScreen):
         self.log_view.clear()
         self._log(tr("全体試験を開始します", "Starting the full test"))
 
-        self._log(tr("[診断] Pluto SDRを再起動中...", "[Diag] Restarting Pluto SDR..."))
-        if not self._reboot_pluto_and_wait():
-            self._set_row(0, tr("完了", "Done"), "NG")
-            self._log(tr("[診断] Pluto SDR再起動後の接続復旧に失敗しました", "[Diag] Failed to reconnect to Pluto SDR after restart"))
-            self.health_label.setText(tr("システム状態: Pluto再起動エラー", "System status: Pluto restart error"))
-            self.run_btn.setEnabled(True)
-            self._running = False
-            return
-
         self._set_row(0, tr("試験中", "Testing"), "…")
         pluto_ok, pluto_detail = check_pluto_connection(self.main_window.settings)
         self._set_row(0, tr("完了", "Done"), "OK" if pluto_ok else "NG")
@@ -197,37 +185,6 @@ class TestEquipmentScreen(SettingsSubScreen):
         # pluto_dvbへの接続・起動が安定するまでの猶予を設ける。
         # SSHハンドシェイク分の余裕を見る)。
         QtCore.QTimer.singleShot(WARMUP_MS, self._tx_warmup_done)
-
-    def _reboot_pluto_and_wait(self) -> bool:
-        try:
-            host = self.main_window.settings.pluto_host()
-            if platform_compat.IS_WINDOWS:
-                # WindowsにはsshpassでSSHパスワード認証を自動化する慣習が無いため、
-                # platform_compat.reboot_pluto()がparamikoで直接同じ操作を行う。
-                platform_compat.reboot_pluto(host, wait=True, timeout=10)
-            else:
-                command = [
-                    "sshpass", "-p", "analog", "ssh",
-                    "-o", "StrictHostKeyChecking=accept-new",
-                    "-o", "ConnectTimeout=6",
-                    "-o", "PreferredAuthentications=password",
-                    "-o", "PubkeyAuthentication=no",
-                    f"root@{host}", "reboot",
-                ]
-                # reboot closes SSH before returning a normal exit status; that is
-                # expected, so the return code is intentionally not used as the
-                # success condition.
-                subprocess.run(command, timeout=10, capture_output=True, text=True)
-        except (OSError, ValueError, subprocess.TimeoutExpired):
-            pass
-
-        # Wait until the IIO context is available again after the reboot.
-        for _ in range(20):
-            time.sleep(1)
-            ok, _detail = check_pluto_connection(self.main_window.settings)
-            if ok:
-                return True
-        return False
 
     def _set_row(self, row: int, status: str, result: str) -> None:
         self.result_table.item(row, 1).setText(status)
