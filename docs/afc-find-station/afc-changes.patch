@@ -1,0 +1,300 @@
+diff --git a/app/gui/manual_content_win.py b/app/gui/manual_content_win.py
+index 6dd8346..5c0c7e4 100644
+--- a/app/gui/manual_content_win.py
++++ b/app/gui/manual_content_win.py
+@@ -74,8 +74,9 @@ MANUAL_SECTIONS_WIN = [
+     ("7. 相手局検索(AFC)", [
+         ("相手局検索とは", "指定した範囲の周波数をスキャンして受信レベル(RSSI)をグラフ表示し、相手局の実際の周波数を素早く特定する機能です。中心周波数は周波数画面で設定した値です(未設定の場合は先に周波数画面で設定してください)。"),
+         ("検索条件", "検索レンジを「±5MHz」「±10MHz」「±20MHz」から選びます(選択中のレンジは水色で強調されます)。ステップ(kHz)はテンキーで入力し、1 kHz以上を指定します。"),
+-        ("検索の実行", "「検索開始」を押すとスキャンを開始し、進行中はステータスに現在の周波数とRSSIが表示されます。スキャン中は「検索停止」で中断できます。グラフには中心周波数の位置が白線で表示されます。"),
+-        ("結果の反映", "検索が終わると「最も強い周波数」が表示されます。「新中心周波数」を押すと、その周波数を運用周波数として設定します。"),
++        ("RXゲイン", "画面右下の「RXゲイン」で、AGC(自動調整)のON/OFFと手動ゲイン(0〜73 dB、「−」「+」ボタン。長押しで連続変更)を調整できます。設定はRXゲイン画面と共通で、検索中でも変更できます。ゲインを変えるとRSSIの値が変わるため、検索中に変更した場合はその周回を最初からやり直します。AGCがONの間は手動ゲインは変更できません。"),
++        ("検索の実行", "「検索開始」を押すとスキャンを開始し、進行中はステータスに現在の周波数とRSSIが表示されます。画面右側の「検索方法」で、「連続」(既定)を選ぶと、スキャンは範囲の終わりまで進むと最初に戻り、「検索停止」を押すまで繰り返し実行されます。「1回」を選ぶと、範囲の終わりまで1回スキャンして自動で停止します。検索中に切り替えた場合は、実行中の周回が終わった時点から反映されます。どちらの場合も、他の画面へ移ると停止します。グラフには中心周波数の位置が白線で表示されます。"),
++        ("検索結果", "1回分のスキャンが終わるたびに「最も強い周波数」が更新されて表示されます。"),
+     ]),
+     ("8. 基本運用手順", [
+         ("送信のみ", "1) ホームで「周波数」「シンボルレート」「FEC」「変調方式」「映像ソース」「TX出力」を設定、2)「送信」を押す、3) 送信画面で映像プレビューを確認、4)「送信開始」を押す、5) 終了時に「送信停止」を押す。"),
+diff --git a/app/gui/manual_content_win_en.py b/app/gui/manual_content_win_en.py
+index ae33fa7..45850f7 100644
+--- a/app/gui/manual_content_win_en.py
++++ b/app/gui/manual_content_win_en.py
+@@ -61,8 +61,9 @@ MANUAL_SECTIONS_WIN_EN = [
+     ("7. Find Station (AFC)", [
+         ("What Find Station does", "It scans a range of frequencies, graphs the received level (RSSI) and quickly identifies the actual frequency of the other station. The center frequency is the value set on the Frequency screen (if it is not set, set it there first)."),
+         ("Search conditions", "Choose the search range from ±5 MHz, ±10 MHz and ±20 MHz (the selected range is highlighted in light blue). Enter the step (kHz) with the keypad; specify 1 kHz or more."),
+-        ("Running a search", "Press \"Start Search\" to begin scanning; while it runs, the status shows the current frequency and RSSI. Press \"Stop Search\" to interrupt the scan. The graph shows the position of the center frequency as a white line."),
+-        ("Applying the result", "When the search finishes, the \"Strongest frequency\" is shown. Press \"Set as Center\" to set that frequency as the operating frequency."),
++        ("RX gain", "At the lower right of the screen, \"RX Gain\" lets you turn AGC (automatic adjustment) on or off and set the manual gain (0 to 73 dB with the \"−\" and \"+\" buttons; hold to change continuously). The setting is shared with the RX Gain screen and can be changed even while a search is running. Changing the gain changes the RSSI values, so if you change it during a search the current pass is restarted from the beginning. The manual gain cannot be changed while AGC is on."),
++        ("Running a search", "Press \"Start Search\" to begin scanning; while it runs, the status shows the current frequency and RSSI. With \"Search Mode\" on the right side of the screen set to \"Repeat\" (default), the scan returns to the start when it reaches the end of the range and repeats until you press \"Stop Search\". With \"Once\", it scans the range one time and stops by itself. If you switch the mode during a search, it takes effect when the current pass finishes. In both modes the search stops when you move to another screen. The graph shows the position of the center frequency as a white line."),
++        ("Search result", "Each time one pass of the scan finishes, the \"Strongest frequency\" is updated and shown."),
+     ]),
+     ("8. Basic Operating Procedure", [
+         ("TX only", "1) On Home, set Frequency, Symbol Rate, FEC, Modulation, Video Source and TX Power. 2) Press \"Transmit\". 3) Check the video preview on the TX screen. 4) Press \"Start TX\". 5) Press \"Stop TX\" when finished."),
+diff --git a/app/gui/screens/afc.py b/app/gui/screens/afc.py
+index 646c667..2871fed 100644
+--- a/app/gui/screens/afc.py
++++ b/app/gui/screens/afc.py
+@@ -11,6 +11,9 @@ from i18n import tr
+ 
+ IIO_ATTR_BIN = platform_compat.find_binary("iio_attr", "/usr/bin/iio_attr")
+ STEP_INTERVAL_MS = 150
++# RXゲイン(AD9361の手動ゲイン範囲。RXゲイン画面のスライダーと同じ)
++RX_GAIN_MIN_DB = 0
++RX_GAIN_MAX_DB = 73
+ 
+ 
+ class RssiGraphWidget(QtWidgets.QWidget):
+@@ -148,6 +151,7 @@ class AfcScreen(SettingsSubScreen):
+         # 場合を除き)TXも停止する。
+         self._tx_started_by_scan = False
+         self._current_freq = 0
++        self._start_freq = 0
+         self._end_freq = 0
+         self._step_hz = 10_000
+         self._best_rssi = None
+@@ -274,14 +278,75 @@ class AfcScreen(SettingsSubScreen):
+         self.best_freq_label.setStyleSheet("color: #eeeeee; font-size: 24px; font-weight: bold;")
+         best_row.addWidget(self.best_freq_label)
+         best_row.addStretch(1)
+-        self.new_center_btn = QtWidgets.QPushButton(tr("新中心周波数", "Set as Center"))
+-        self.new_center_btn.setMinimumHeight(44)
+-        self.new_center_btn.setStyleSheet(
+-            "QPushButton { background: #0c91b5; color: white; border: none;"
+-            " border-radius: 6px; font-size: 24px; font-weight: bold; padding: 4px 12px; }")
+-        self.new_center_btn.clicked.connect(self._apply_best_as_center)
+-        best_row.addWidget(self.new_center_btn)
+         right_layout.addLayout(best_row)
++
++        # 検索の繰り返し方: 連続(「検索停止」まで繰り返す)/ 1回(範囲の終わりで自動停止)。
++        # 検索中に切り替えた場合は、実行中の周回が終わった時点から反映される。
++        mode_row = QtWidgets.QHBoxLayout()
++        mode_title = QtWidgets.QLabel(tr("検索方法", "Search Mode"))
++        mode_title.setStyleSheet("color: #eeeeee; font-size: 24px; font-weight: bold;")
++        mode_row.addWidget(mode_title)
++        mode_row.addStretch(1)
++        self._mode_group = QtWidgets.QButtonGroup(self)
++        self._mode_group.setExclusive(True)
++        self.repeat_btn = QtWidgets.QPushButton(tr("連続", "Repeat"))
++        self.once_btn = QtWidgets.QPushButton(tr("1回", "Once"))
++        for button in (self.repeat_btn, self.once_btn):
++            button.setCheckable(True)
++            button.setMinimumSize(90, 44)
++            button.setStyleSheet(
++                "QPushButton { background: #303538; color: white; border: none;"
++                " border-radius: 6px; font-size: 24px; font-weight: bold; padding: 4px 12px; }"
++                "QPushButton:checked { background: #54bce0; color: #101416; }")
++            self._mode_group.addButton(button)
++            mode_row.addWidget(button)
++        self.repeat_btn.toggled.connect(self._on_scan_mode_changed)
++        right_layout.addLayout(mode_row)
++
++        # ★RXゲイン。RXゲイン画面と同じ設定値(rx_agc_enabled/rx_gain_db)を共有し、
++        # 検索中でも変更できる。変更は少し待ってから(連打・長押しをまとめて)Plutoへ反映する。
++        gain_row = QtWidgets.QHBoxLayout()
++        gain_title = QtWidgets.QLabel(tr("RXゲイン", "RX Gain"))
++        gain_title.setStyleSheet("color: #eeeeee; font-size: 24px; font-weight: bold;")
++        gain_row.addWidget(gain_title)
++        gain_row.addStretch(1)
++        gain_button_style = (
++            "QPushButton { background: #0c91b5; color: white; border: none;"
++            " border-radius: 6px; font-size: 26px; font-weight: bold; padding: 4px 12px; }"
++            "QPushButton:pressed { background: #3f96b3; }"
++            "QPushButton:disabled { background: #303538; color: #6b7880; }")
++        self.agc_btn = QtWidgets.QPushButton("AGC")
++        self.agc_btn.setCheckable(True)
++        self.agc_btn.setMinimumHeight(44)
++        self.agc_btn.setStyleSheet(
++            "QPushButton { background: #303538; color: white; border: none;"
++            " border-radius: 6px; font-size: 22px; font-weight: bold; padding: 4px 10px; }"
++            "QPushButton:checked { background: #0c91b5; }")
++        self.agc_btn.toggled.connect(self._on_agc_toggled)
++        gain_row.addWidget(self.agc_btn)
++        self.gain_down_btn = QtWidgets.QPushButton("−")
++        self.gain_up_btn = QtWidgets.QPushButton("+")
++        for button, delta in ((self.gain_down_btn, -1), (self.gain_up_btn, 1)):
++            button.setMinimumSize(52, 44)
++            button.setStyleSheet(gain_button_style)
++            button.setAutoRepeat(True)          # 長押しで連続変更
++            button.setAutoRepeatDelay(400)
++            button.setAutoRepeatInterval(80)
++            button.clicked.connect(lambda _checked=False, d=delta: self._change_rx_gain(d))
++        self.gain_label = QtWidgets.QLabel("60 dB")
++        self.gain_label.setAlignment(QtCore.Qt.AlignCenter)
++        self.gain_label.setMinimumWidth(90)
++        self.gain_label.setStyleSheet("color: #eeeeee; font-size: 24px; font-weight: bold;")
++        gain_row.addWidget(self.gain_down_btn)
++        gain_row.addWidget(self.gain_label)
++        gain_row.addWidget(self.gain_up_btn)
++        right_layout.addLayout(gain_row)
++        self._gain_apply_timer = QtCore.QTimer(self)
++        self._gain_apply_timer.setSingleShot(True)
++        self._gain_apply_timer.setInterval(250)
++        self._gain_apply_timer.timeout.connect(self._apply_rx_gain)
++        self._load_rx_gain_controls()
++        self._load_scan_mode_controls()
+         columns.addWidget(right, 2)
+ 
+         bottom = QtWidgets.QHBoxLayout()
+@@ -297,6 +362,8 @@ class AfcScreen(SettingsSubScreen):
+ 
+     def on_show(self) -> None:
+         self._update_center_label()
++        self._load_rx_gain_controls()
++        self._load_scan_mode_controls()
+         # 画面遷移のたびに、周波数画面で設定した運用周波数を中心とした範囲を
+         # 自動的に取り込む(既定は±10MHz。他の幅が必要ならプリセットボタンで
+         # 切り替え直す)。未設定の場合は既存の範囲欄をそのまま残す(警告は出さない
+@@ -392,14 +459,11 @@ class AfcScreen(SettingsSubScreen):
+                 tr("ステップは1kHz以上で指定してください", "The step must be 1 kHz or more"))
+             return
+         settings = self.main_window.settings
+-        self._current_freq = start_khz * 1000
++        self._start_freq = start_khz * 1000
+         self._end_freq = end_khz * 1000
+         self._step_hz = step_khz * 1000
+-        self._scan_best_rssi = None
+-        self._scan_best_freq = None
+-        self._scan_rssi_values = []
+-        self.rssi_graph.set_range(self._current_freq, self._end_freq)
+-        self.rssi_graph.set_center(self.main_window.settings.effective_lo_hz())
++        self._apply_rx_gain()
++        self._begin_sweep()
+         self._scanning = True
+         self.status_label.setText(tr("検索中...", "Searching..."))
+         self.search_btn.setText(tr("検索停止", "Stop Search"))
+@@ -438,6 +502,89 @@ class AfcScreen(SettingsSubScreen):
+             self.main_window.tx_controller.stop()
+         self.status_label.setText(tr("検索待機中", "Search idle"))
+         self.search_btn.setText(tr("検索開始", "Start Search"))
++        self._commit_scan_result()
++
++    def _load_scan_mode_controls(self) -> None:
++        repeat = self.main_window.settings.afc_repeat_scan
++        blocked = self.repeat_btn.blockSignals(True)
++        self.repeat_btn.setChecked(repeat)
++        self.once_btn.setChecked(not repeat)
++        self.repeat_btn.blockSignals(blocked)
++
++    def _on_scan_mode_changed(self, repeat: bool) -> None:
++        self.main_window.settings.afc_repeat_scan = repeat
++        self.main_window.save_settings()
++
++    def _load_rx_gain_controls(self) -> None:
++        settings = self.main_window.settings
++        blocked = self.agc_btn.blockSignals(True)
++        self.agc_btn.setChecked(settings.rx_agc_enabled)
++        self.agc_btn.blockSignals(blocked)
++        self._update_rx_gain_controls()
++
++    def _update_rx_gain_controls(self) -> None:
++        settings = self.main_window.settings
++        self.gain_label.setText(f"{settings.rx_gain_db} dB")
++        # AGC ON中は手動ゲインは効かないので、RXゲイン画面と同様に−/+を無効にする。
++        manual = not settings.rx_agc_enabled
++        self.gain_down_btn.setEnabled(manual)
++        self.gain_up_btn.setEnabled(manual)
++
++    def _on_agc_toggled(self, checked: bool) -> None:
++        self.main_window.settings.rx_agc_enabled = checked
++        self.main_window.save_settings()
++        self._update_rx_gain_controls()
++        self._gain_apply_timer.start()
++
++    def _change_rx_gain(self, delta_db: int) -> None:
++        settings = self.main_window.settings
++        new_gain = max(RX_GAIN_MIN_DB, min(RX_GAIN_MAX_DB, settings.rx_gain_db + delta_db))
++        if new_gain == settings.rx_gain_db:
++            return
++        settings.rx_gain_db = new_gain
++        self.main_window.save_settings()
++        self._update_rx_gain_controls()
++        self._gain_apply_timer.start()      # 連打・長押し中は最後の操作から250ms後に1回だけ反映
++
++    def _iio_set_rx(self, attribute: str, value: str) -> None:
++        settings = self.main_window.settings
++        subprocess.run([IIO_ATTR_BIN, "-u", settings.pluto_uri, "-i", "-c", "ad9361-phy",
++                        "voltage0", attribute, value], capture_output=True, timeout=2,
++                       **platform_compat.no_window_kwargs())
++
++    def _apply_rx_gain(self) -> None:
++        """RXゲイン設定(AGC/手動ゲイン)をPlutoへ反映する。検索中でも呼べる。"""
++        settings = self.main_window.settings
++        try:
++            if settings.rx_agc_enabled:
++                self._iio_set_rx("gain_control_mode", "slow_attack")
++            else:
++                self._iio_set_rx("gain_control_mode", "manual")
++                self._iio_set_rx("hardwaregain", str(settings.rx_gain_db))
++        except (subprocess.TimeoutExpired, OSError):
++            return      # Plutoに届かない場合も設定値は保存済み。次回の検索・受信開始で反映される。
++        if self._scanning:
++            # ★ゲインが変わるとRSSIの絶対値が変わる。同じ1周の中に異なるゲインの測定値が
++            # 混ざると「最も強い周波数」を誤判定するため、この周回を最初からやり直す。
++            self._begin_sweep()
++
++    def on_hide(self) -> None:
++        # ★「検索停止」が押されるまで繰り返す動作のため、他の画面へ移った後も
++        # スキャン(Plutoへの周波数設定・RSSI取得)が裏で続かないよう、画面を離れる時に止める。
++        if self._scanning:
++            self._stop_scan()
++
++    def _begin_sweep(self) -> None:
++        """1回分のスキャン(開始周波数〜終了周波数)を先頭から始める。"""
++        self._current_freq = self._start_freq
++        self._scan_best_rssi = None
++        self._scan_best_freq = None
++        self._scan_rssi_values = []
++        self.rssi_graph.set_range(self._start_freq, self._end_freq)
++        self.rssi_graph.set_center(self.main_window.settings.effective_lo_hz())
++
++    def _commit_scan_result(self) -> None:
++        """直前までのスキャンで得た「最も強い周波数」を確定して表示する。"""
+         if self._scan_best_freq is None or not self._scan_rssi_values:
+             return
+         spread = max(self._scan_rssi_values) - min(self._scan_rssi_values)
+@@ -450,23 +597,16 @@ class AfcScreen(SettingsSubScreen):
+             tr(f"最も強い周波数: {self._best_freq / 1000:.0f} kHz (RSSI {self._best_rssi:g})",
+                f"Strongest frequency: {self._best_freq / 1000:.0f} kHz (RSSI {self._best_rssi:g})"))
+ 
+-    def _apply_best_as_center(self) -> None:
+-        if self._best_freq is None:
+-            QtWidgets.QMessageBox.warning(
+-                self, tr("設定不可", "Cannot Set"), tr("検索結果がありません", "No search result"))
+-            return
+-        settings = self.main_window.settings
+-        settings.use_custom_lo_frequency = True
+-        settings.custom_lo_frequency_hz = self._best_freq
+-        self.main_window.save_settings()
+-        self._update_center_label()
+-        self.status_label.setText(tr(
+-            f"中心周波数を {self._best_freq / 1000:.0f} kHz に設定しました",
+-            f"Center frequency set to {self._best_freq / 1000:.0f} kHz"))
+-
+     def _scan_step(self) -> None:
+         if self._current_freq > self._end_freq:
+-            self._stop_scan()
++            if not self.main_window.settings.afc_repeat_scan:
++                # 「1回」: 範囲の終わりで自動停止する(結果の確定は_stop_scan内)。
++                self._stop_scan()
++                return
++            # 「連続」: 1回分のスキャンが終わったら結果を確定し、「検索停止」が押される
++            # まで開始周波数に戻って繰り返す。
++            self._commit_scan_result()
++            self._begin_sweep()
+             return
+         freq = self._current_freq
+         settings = self.main_window.settings
+diff --git a/app/gui/settings_store.py b/app/gui/settings_store.py
+index 766316d..a7c31b2 100644
+--- a/app/gui/settings_store.py
++++ b/app/gui/settings_store.py
+@@ -160,6 +160,9 @@ class AppSettings:
+     rx_agc_enabled: bool = False
+     rx_gain_db: int = 60  # 0..73、AGC OFF時のみ有効
+ 
++    # 相手局検索(AFC): True=「検索停止」が押されるまで繰り返す(連続)、False=範囲の終わりまで1回で自動停止
++    afc_repeat_scan: bool = True
++
+     # TX出力
+     tx_power_db: float = 0.0  # -70..0、0=最大出力（40 dB外部アッテネータ試験の既定）
+ 

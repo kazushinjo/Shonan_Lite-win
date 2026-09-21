@@ -1,0 +1,624 @@
+diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
+index b53dd31..839554b 100644
+--- a/lib/CMakeLists.txt
++++ b/lib/CMakeLists.txt
+@@ -54,10 +54,14 @@ target_include_directories(gnuradio-dvbs2rx
+ set_target_properties(gnuradio-dvbs2rx PROPERTIES DEFINE_SYMBOL "gnuradio_dvbs2rx_EXPORTS")
+ 
+ option(NATIVE_OPTIMIZATIONS "Optimize build for the local machine" ON)
+-if (NATIVE_OPTIMIZATIONS)
+-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall")
++if (MSVC)
++    if (NATIVE_OPTIMIZATIONS)
++        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
++    endif()
++elseif (NATIVE_OPTIMIZATIONS)
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall")
+ else()
+-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+ endif()
+ 
+ if(APPLE)
+diff --git a/lib/ldpc_decoder/CMakeLists.txt b/lib/ldpc_decoder/CMakeLists.txt
+index 8633c3b..4062e2b 100644
+--- a/lib/ldpc_decoder/CMakeLists.txt
++++ b/lib/ldpc_decoder/CMakeLists.txt
+@@ -9,8 +9,14 @@ endif()
+ if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64|amd64)|(^i.86$)")
+   add_library(ldpc_decoder_avx2 STATIC ldpc_decoder_avx2.cc)
+   add_library(ldpc_decoder_sse41 STATIC ldpc_decoder_sse41.cc)
+-  target_compile_options(ldpc_decoder_avx2 PRIVATE -mavx2)
+-  target_compile_options(ldpc_decoder_sse41 PRIVATE -msse4.1)
++  if(MSVC)
++    # MSVCはSSE4.1専用フラグを持たない(x64既定でSSE2以上、intrinsicsはヘッダで
++    # 常時使用可能なため無指定で足りる)。AVX2のみ/arch:AVX2を明示する。
++    target_compile_options(ldpc_decoder_avx2 PRIVATE /arch:AVX2)
++  else()
++    target_compile_options(ldpc_decoder_avx2 PRIVATE -mavx2)
++    target_compile_options(ldpc_decoder_sse41 PRIVATE -msse4.1)
++  endif()
+   list(APPEND LDPC_LIBS ldpc_decoder_avx2)
+   list(APPEND LDPC_LIBS ldpc_decoder_sse41)
+ endif()
+@@ -20,6 +26,12 @@ list(APPEND LDPC_LIBS ldpc_decoder_generic)
+ 
+ foreach(LDPC_LIB ${LDPC_LIBS})
+   set_property(TARGET ${LDPC_LIB} PROPERTY POSITION_INDEPENDENT_CODE ON)
++  if(MSVC)
++    # ソースがUTF-8保存のため、システムのANSIコードページ(日本語版Windowsでは
++    # 932)への誤変換を防ぐ。/utf-8を付けないとヘッダ内の非ASCIIコメントが原因で
++    # 後続行のパースが壊れ、無関係な"未定義の識別子"エラーになることがある。
++    target_compile_options(${LDPC_LIB} PRIVATE /utf-8)
++  endif()
+ endforeach()
+ 
+ set(LDPC_LIBS ${LDPC_LIBS} PARENT_SCOPE)
+diff --git a/lib/ldpc_decoder/algorithms.hh b/lib/ldpc_decoder/algorithms.hh
+index 4548899..d62ad4c 100644
+--- a/lib/ldpc_decoder/algorithms.hh
++++ b/lib/ldpc_decoder/algorithms.hh
+@@ -10,6 +10,8 @@
+ #ifndef ALGORITHMS_HH
+ #define ALGORITHMS_HH
+ 
++#include "portable_vla.hh"
++
+ #include "exclusive_reduce.hh"
+ #include "generic.hh"
+ #include "simd.hh"
+@@ -33,12 +35,13 @@ struct MinSumAlgorithm<SIMD<VALUE, WIDTH>, UPDATE> {
+     static TYPE sign(TYPE a, TYPE b) { return vsign(a, b); }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
++        GR_DVBS2RX_VLA(TYPE, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = vabs(links[i]);
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        TYPE signs[cnt];
++        GR_DVBS2RX_VLA(TYPE, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, sign);
+ 
+         for (int i = 0; i < cnt; ++i)
+@@ -78,11 +81,11 @@ struct MinSumAlgorithm<SIMD<int8_t, WIDTH>, UPDATE> {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE mags[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = vqabs(links[i]);
+ 
+-        TYPE mins[2];
++        GR_DVBS2RX_VLA(TYPE, mins, 2);
+         mins[0] = vmin(mags[0], mags[1]);
+         mins[1] = vmax(mags[0], mags[1]);
+         for (int i = 2; i < cnt; ++i) {
+@@ -124,12 +127,13 @@ struct OffsetMinSumAlgorithm<SIMD<VALUE, WIDTH>, UPDATE, FACTOR> {
+     static void finalp(TYPE* links, int cnt)
+     {
+         TYPE beta = vdup<TYPE>(0.5 * FACTOR);
+-        TYPE mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
++        GR_DVBS2RX_VLA(TYPE, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = vmax(vsub(vabs(links[i]), beta), vzero<TYPE>());
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        TYPE signs[cnt];
++        GR_DVBS2RX_VLA(TYPE, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, sign);
+ 
+         for (int i = 0; i < cnt; ++i)
+@@ -170,11 +174,11 @@ struct OffsetMinSumAlgorithm<SIMD<int8_t, WIDTH>, UPDATE, FACTOR> {
+     static void finalp(TYPE* links, int cnt)
+     {
+         auto beta = vunsigned(vdup<TYPE>(std::nearbyint(0.5 * FACTOR)));
+-        TYPE mags[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = vsigned(vqsub(vunsigned(vqabs(links[i])), beta));
+ 
+-        TYPE mins[2];
++        GR_DVBS2RX_VLA(TYPE, mins, 2);
+         mins[0] = vmin(mags[0], mags[1]);
+         mins[1] = vmax(mags[0], mags[1]);
+         for (int i = 2; i < cnt; ++i) {
+@@ -235,7 +239,7 @@ struct MinSumCAlgorithm<SIMD<VALUE, WIDTH>, UPDATE, FACTOR> {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE tmp[cnt];
++        GR_DVBS2RX_VLA(TYPE, tmp, cnt);
+         CODE::exclusive_reduce(links, tmp, cnt, minc);
+         for (int i = 0; i < cnt; ++i)
+             links[i] = tmp[i];
+@@ -282,7 +286,7 @@ struct MinSumCAlgorithm<SIMD<int8_t, WIDTH>, UPDATE, FACTOR> {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE tmp[cnt];
++        GR_DVBS2RX_VLA(TYPE, tmp, cnt);
+         CODE::exclusive_reduce(links, tmp, cnt, minc);
+         for (int i = 0; i < cnt; ++i)
+             links[i] = tmp[i];
+diff --git a/lib/ldpc_decoder/avx2.hh b/lib/ldpc_decoder/avx2.hh
+index 98a5c95..4ba90a2 100644
+--- a/lib/ldpc_decoder/avx2.hh
++++ b/lib/ldpc_decoder/avx2.hh
+@@ -116,7 +116,7 @@ template <>
+ inline SIMD<float, 8> vreinterpret(SIMD<uint32_t, 8> a)
+ {
+     SIMD<float, 8> tmp;
+-    tmp.m = (__m256)a.m;
++    tmp.m = _mm256_castsi256_ps(a.m);
+     return tmp;
+ }
+ 
+@@ -124,7 +124,7 @@ template <>
+ inline SIMD<uint32_t, 8> vreinterpret(SIMD<float, 8> a)
+ {
+     SIMD<uint32_t, 8> tmp;
+-    tmp.m = (__m256i)a.m;
++    tmp.m = _mm256_castps_si256(a.m);
+     return tmp;
+ }
+ 
+@@ -132,7 +132,7 @@ template <>
+ inline SIMD<double, 4> vreinterpret(SIMD<uint64_t, 4> a)
+ {
+     SIMD<double, 4> tmp;
+-    tmp.m = (__m256d)a.m;
++    tmp.m = _mm256_castsi256_pd(a.m);
+     return tmp;
+ }
+ 
+@@ -140,7 +140,7 @@ template <>
+ inline SIMD<uint64_t, 4> vreinterpret(SIMD<double, 4> a)
+ {
+     SIMD<uint64_t, 4> tmp;
+-    tmp.m = (__m256i)a.m;
++    tmp.m = _mm256_castpd_si256(a.m);
+     return tmp;
+ }
+ 
+@@ -699,7 +699,7 @@ template <>
+ inline SIMD<uint32_t, 8> vceqz(SIMD<float, 8> a)
+ {
+     SIMD<uint32_t, 8> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_ps(a.m, _mm256_setzero_ps(), _CMP_EQ_OQ);
++    tmp.m = _mm256_castps_si256(_mm256_cmp_ps(a.m, _mm256_setzero_ps(), _CMP_EQ_OQ));
+     return tmp;
+ }
+ 
+@@ -707,7 +707,7 @@ template <>
+ inline SIMD<uint64_t, 4> vceqz(SIMD<double, 4> a)
+ {
+     SIMD<uint64_t, 4> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_pd(a.m, _mm256_setzero_pd(), _CMP_EQ_OQ);
++    tmp.m = _mm256_castpd_si256(_mm256_cmp_pd(a.m, _mm256_setzero_pd(), _CMP_EQ_OQ));
+     return tmp;
+ }
+ 
+@@ -747,7 +747,7 @@ template <>
+ inline SIMD<uint32_t, 8> vceq(SIMD<float, 8> a, SIMD<float, 8> b)
+ {
+     SIMD<uint32_t, 8> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_ps(a.m, b.m, _CMP_EQ_OQ);
++    tmp.m = _mm256_castps_si256(_mm256_cmp_ps(a.m, b.m, _CMP_EQ_OQ));
+     return tmp;
+ }
+ 
+@@ -755,7 +755,7 @@ template <>
+ inline SIMD<uint64_t, 4> vceq(SIMD<double, 4> a, SIMD<double, 4> b)
+ {
+     SIMD<uint64_t, 4> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_pd(a.m, b.m, _CMP_EQ_OQ);
++    tmp.m = _mm256_castpd_si256(_mm256_cmp_pd(a.m, b.m, _CMP_EQ_OQ));
+     return tmp;
+ }
+ 
+@@ -795,7 +795,7 @@ template <>
+ inline SIMD<uint32_t, 8> vcgtz(SIMD<float, 8> a)
+ {
+     SIMD<uint32_t, 8> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_ps(a.m, _mm256_setzero_ps(), _CMP_GT_OQ);
++    tmp.m = _mm256_castps_si256(_mm256_cmp_ps(a.m, _mm256_setzero_ps(), _CMP_GT_OQ));
+     return tmp;
+ }
+ 
+@@ -803,7 +803,7 @@ template <>
+ inline SIMD<uint64_t, 4> vcgtz(SIMD<double, 4> a)
+ {
+     SIMD<uint64_t, 4> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_pd(a.m, _mm256_setzero_pd(), _CMP_GT_OQ);
++    tmp.m = _mm256_castpd_si256(_mm256_cmp_pd(a.m, _mm256_setzero_pd(), _CMP_GT_OQ));
+     return tmp;
+ }
+ 
+@@ -843,7 +843,7 @@ template <>
+ inline SIMD<uint32_t, 8> vcltz(SIMD<float, 8> a)
+ {
+     SIMD<uint32_t, 8> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_ps(a.m, _mm256_setzero_ps(), _CMP_LT_OQ);
++    tmp.m = _mm256_castps_si256(_mm256_cmp_ps(a.m, _mm256_setzero_ps(), _CMP_LT_OQ));
+     return tmp;
+ }
+ 
+@@ -851,7 +851,7 @@ template <>
+ inline SIMD<uint64_t, 4> vcltz(SIMD<double, 4> a)
+ {
+     SIMD<uint64_t, 4> tmp;
+-    tmp.m = (__m256i)_mm256_cmp_pd(a.m, _mm256_setzero_pd(), _CMP_LT_OQ);
++    tmp.m = _mm256_castpd_si256(_mm256_cmp_pd(a.m, _mm256_setzero_pd(), _CMP_LT_OQ));
+     return tmp;
+ }
+ 
+diff --git a/lib/ldpc_decoder/generic.hh b/lib/ldpc_decoder/generic.hh
+index 9d375d5..fc3d4a8 100644
+--- a/lib/ldpc_decoder/generic.hh
++++ b/lib/ldpc_decoder/generic.hh
+@@ -10,6 +10,8 @@
+ #ifndef GENERIC_HH
+ #define GENERIC_HH
+ 
++#include "portable_vla.hh"
++
+ #include "exclusive_reduce.hh"
+ #include <algorithm>
+ #include <cmath>
+@@ -40,12 +42,13 @@ struct MinSumAlgorithm {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
++        GR_DVBS2RX_VLA(TYPE, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = std::abs(links[i]);
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        TYPE signs[cnt];
++        GR_DVBS2RX_VLA(TYPE, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, sign);
+ 
+         for (int i = 0; i < cnt; ++i)
+@@ -66,12 +69,13 @@ struct MinSumAlgorithm<float, UPDATE> {
+     static void finalp(float* links, int cnt)
+     {
+         int mask = 0x80000000;
+-        float mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(float, mags, cnt);
++        GR_DVBS2RX_VLA(float, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = std::abs(links[i]);
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        int signs[cnt];
++        GR_DVBS2RX_VLA(int, signs, cnt);
+         CODE::exclusive_reduce(reinterpret_cast<int*>(links), signs, cnt, xor_);
+         for (int i = 0; i < cnt; ++i)
+             signs[i] &= mask;
+@@ -108,12 +112,13 @@ struct MinSumAlgorithm<int8_t, UPDATE> {
+     static int8_t sign(int8_t a, int8_t b) { return b < 0 ? -a : b > 0 ? a : 0; }
+     static void finalp(int8_t* links, int cnt)
+     {
+-        int8_t mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(int8_t, mags, cnt);
++        GR_DVBS2RX_VLA(int8_t, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = sqabs(links[i]);
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        int8_t signs[cnt];
++        GR_DVBS2RX_VLA(int8_t, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, xor_);
+         for (int i = 0; i < cnt; ++i)
+             signs[i] |= 127;
+@@ -140,12 +145,13 @@ struct OffsetMinSumAlgorithm {
+     static void finalp(TYPE* links, int cnt)
+     {
+         TYPE beta = 0.5 * FACTOR;
+-        TYPE mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
++        GR_DVBS2RX_VLA(TYPE, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = std::max(std::abs(links[i]) - beta, TYPE(0));
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        TYPE signs[cnt];
++        GR_DVBS2RX_VLA(TYPE, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, sign);
+ 
+         for (int i = 0; i < cnt; ++i)
+@@ -186,12 +192,13 @@ struct OffsetMinSumAlgorithm<int8_t, UPDATE, FACTOR> {
+     static void finalp(int8_t* links, int cnt)
+     {
+         int8_t beta = std::nearbyint(0.5 * FACTOR);
+-        int8_t mags[cnt], mins[cnt];
++        GR_DVBS2RX_VLA(int8_t, mags, cnt);
++        GR_DVBS2RX_VLA(int8_t, mins, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = subu(sqabs(links[i]), beta);
+         CODE::exclusive_reduce(mags, mins, cnt, min);
+ 
+-        int8_t signs[cnt];
++        GR_DVBS2RX_VLA(int8_t, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, xor_);
+         for (int i = 0; i < cnt; ++i)
+             signs[i] |= 127;
+@@ -238,7 +245,7 @@ struct MinSumCAlgorithm {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE tmp[cnt];
++        GR_DVBS2RX_VLA(TYPE, tmp, cnt);
+         CODE::exclusive_reduce(links, tmp, cnt, min);
+         for (int i = 0; i < cnt; ++i)
+             links[i] = tmp[i];
+@@ -276,7 +283,7 @@ struct MinSumCAlgorithm<float, UPDATE, FACTOR> {
+     }
+     static void finalp(float* links, int cnt)
+     {
+-        float tmp[cnt];
++        GR_DVBS2RX_VLA(float, tmp, cnt);
+         CODE::exclusive_reduce(links, tmp, cnt, min);
+         for (int i = 0; i < cnt; ++i)
+             links[i] = tmp[i];
+@@ -342,7 +349,7 @@ struct MinSumCAlgorithm<int8_t, UPDATE, FACTOR> {
+     }
+     static void finalp(int8_t* links, int cnt)
+     {
+-        int8_t tmp[cnt];
++        GR_DVBS2RX_VLA(int8_t, tmp, cnt);
+         CODE::exclusive_reduce(links, tmp, cnt, min);
+         for (int i = 0; i < cnt; ++i)
+             links[i] = tmp[i];
+@@ -371,12 +378,13 @@ struct LogDomainSPA {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE mags[cnt], sums[cnt];
++        GR_DVBS2RX_VLA(TYPE, mags, cnt);
++        GR_DVBS2RX_VLA(TYPE, sums, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = phi(std::abs(links[i]));
+         CODE::exclusive_reduce(mags, sums, cnt, add);
+ 
+-        TYPE signs[cnt];
++        GR_DVBS2RX_VLA(TYPE, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, sign);
+ 
+         for (int i = 0; i < cnt; ++i)
+@@ -404,14 +412,14 @@ struct LambdaMinAlgorithm {
+     static void finalp(TYPE* links, int cnt)
+     {
+         typedef std::pair<TYPE, int> Pair;
+-        Pair mags[cnt];
++        GR_DVBS2RX_VLA(Pair, mags, cnt);
+         for (int i = 0; i < cnt; ++i)
+             mags[i] = Pair(std::abs(links[i]), i);
+         std::nth_element(mags, mags + LAMBDA, mags + cnt, [](Pair a, Pair b) {
+             return a.first < b.first;
+         });
+ 
+-        TYPE sums[cnt];
++        GR_DVBS2RX_VLA(TYPE, sums, cnt);
+         for (int i = 0; i < cnt; ++i) {
+             int j = 0;
+             if (i == mags[0].second)
+@@ -425,7 +433,7 @@ struct LambdaMinAlgorithm {
+             }
+         }
+ 
+-        TYPE signs[cnt];
++        GR_DVBS2RX_VLA(TYPE, signs, cnt);
+         CODE::exclusive_reduce(links, signs, cnt, sign);
+ 
+         for (int i = 0; i < cnt; ++i)
+@@ -448,7 +456,8 @@ struct SumProductAlgorithm {
+     }
+     static void finalp(TYPE* links, int cnt)
+     {
+-        TYPE in[cnt], out[cnt];
++        GR_DVBS2RX_VLA(TYPE, in, cnt);
++        GR_DVBS2RX_VLA(TYPE, out, cnt);
+         for (int i = 0; i < cnt; ++i)
+             in[i] = prep(links[i]);
+         CODE::exclusive_reduce(in, out, cnt, mul);
+diff --git a/lib/ldpc_decoder/layered_decoder.hh b/lib/ldpc_decoder/layered_decoder.hh
+index 3e7ce8b..f637952 100644
+--- a/lib/ldpc_decoder/layered_decoder.hh
++++ b/lib/ldpc_decoder/layered_decoder.hh
+@@ -12,6 +12,26 @@
+ 
+ #include "ldpc.hh"
+ #include <stdlib.h>
++#ifdef _MSC_VER
++#include <vector>
++#endif
++
++#ifdef _MSC_VER
++// MSVCのCRTはC11 aligned_alloc()を実装していないため_aligned_malloc()で代替する
++// (引数順序が逆: サイズ,アライメント。解放もfree()ではなく_aligned_free()が必要)。
++#include <malloc.h>
++static inline void* portable_aligned_alloc(size_t alignment, size_t size)
++{
++    return _aligned_malloc(size, alignment);
++}
++static inline void portable_aligned_free(void* ptr) { _aligned_free(ptr); }
++#else
++static inline void* portable_aligned_alloc(size_t alignment, size_t size)
++{
++    return aligned_alloc(alignment, size);
++}
++static inline void portable_aligned_free(void* ptr) { free(ptr); }
++#endif
+ 
+ template <typename TYPE, typename ALG>
+ class LDPCDecoder
+@@ -54,7 +74,15 @@ class LDPCDecoder
+             int cnt = cnc[i];
+             for (int j = 0; j < M; ++j) {
+                 int deg = cnt + 2 - !(i | j);
++#ifdef _MSC_VER
++                // MSVCは可変長配列(VLA)を認めないため、この環境限定でヒープ確保に
++                // 切り替える(Linux/GCCのビルドは従来通りVLAでスタック確保のまま)。
++                std::vector<TYPE> inp_storage(deg), out_storage(deg);
++                TYPE* inp = inp_storage.data();
++                TYPE* out = out_storage.data();
++#else
+                 TYPE inp[deg], out[deg];
++#endif
+                 for (int c = 0; c < cnt; ++c)
+                     inp[c] = out[c] = alg.sub(data[pos[CNL * (M * i + j) + c]], bl[c]);
+                 inp[cnt] = out[cnt] = alg.sub(parity[M * i + j], bl[cnt]);
+@@ -101,8 +129,8 @@ public:
+     void init(LDPCInterface* it)
+     {
+         if (initialized) {
+-            free(bnl);
+-            free(pty);
++            portable_aligned_free(bnl);
++            portable_aligned_free(pty);
+             delete[] cnc;
+             delete[] pos;
+         }
+@@ -130,8 +158,8 @@ public:
+         }
+         LT = ldpc->links_total();
+         delete ldpc;
+-        bnl = reinterpret_cast<TYPE*>(aligned_alloc(sizeof(TYPE), sizeof(TYPE) * LT));
+-        pty = reinterpret_cast<TYPE*>(aligned_alloc(sizeof(TYPE), sizeof(TYPE) * R));
++        bnl = reinterpret_cast<TYPE*>(portable_aligned_alloc(sizeof(TYPE), sizeof(TYPE) * LT));
++        pty = reinterpret_cast<TYPE*>(portable_aligned_alloc(sizeof(TYPE), sizeof(TYPE) * R));
+         uint16_t* tmp = new uint16_t[R * CNL];
+         for (int i = 0; i < q; ++i)
+             for (int j = 0; j < M; ++j)
+@@ -161,8 +189,8 @@ public:
+     ~LDPCDecoder()
+     {
+         if (initialized) {
+-            free(bnl);
+-            free(pty);
++            portable_aligned_free(bnl);
++            portable_aligned_free(pty);
+             delete[] cnc;
+             delete[] pos;
+         }
+diff --git a/lib/ldpc_decoder/portable_vla.hh b/lib/ldpc_decoder/portable_vla.hh
+new file mode 100644
+index 0000000..afc9e47
+--- /dev/null
++++ b/lib/ldpc_decoder/portable_vla.hh
+@@ -0,0 +1,22 @@
++/* -*- c++ -*- */
++/*
++ * MSVC does not support C99/GNU variable-length arrays (VLAs), which this
++ * LDPC decoder code otherwise relies on heavily for small per-check-node
++ * scratch buffers sized at runtime. GCC/Clang (the Linux/Pi5 build) keep
++ * using real VLAs (fast stack allocation, unaffected); MSVC falls back to
++ * a heap-allocated std::vector with the same effective lifetime (function
++ * scope). This only affects the Windows dev-environment build.
++ */
++#ifndef GR_DVBS2RX_PORTABLE_VLA_HH
++#define GR_DVBS2RX_PORTABLE_VLA_HH
++
++#ifdef _MSC_VER
++#include <vector>
++#define GR_DVBS2RX_VLA(TYPE, NAME, SIZE) \
++    std::vector<TYPE> NAME##_vla_storage(SIZE); \
++    TYPE* NAME = NAME##_vla_storage.data()
++#else
++#define GR_DVBS2RX_VLA(TYPE, NAME, SIZE) TYPE NAME[SIZE]
++#endif
++
++#endif
+diff --git a/lib/ldpc_decoder_bb_impl.cc b/lib/ldpc_decoder_bb_impl.cc
+index abeec39..2ac70a2 100644
+--- a/lib/ldpc_decoder_bb_impl.cc
++++ b/lib/ldpc_decoder_bb_impl.cc
+@@ -20,6 +20,9 @@
+ #include <gnuradio/pdu.h>
+ #include <boost/format.hpp>
+ #include <cmath>
++#ifdef _MSC_VER
++#include <malloc.h>
++#endif
+ 
+ #ifdef CPU_FEATURES_ARCH_ARM
+ #include "cpuinfo_arm.h"
+@@ -350,7 +353,14 @@ ldpc_decoder_bb_impl::ldpc_decoder_bb_impl(dvb_standard_t standard,
+     assert(decode != nullptr);
+     d_debug_logger->debug("LDPC decoder implementation: {:s}", impl);
+     d_soft = new int8_t[d_ldpc->code_len() * d_simd_size];
++#ifdef _MSC_VER
++    // MSVCのCRTはC11 aligned_alloc()を実装していないため、_aligned_malloc()
++    // (引数順序が逆: サイズ,アライメント)を使う。対応する解放はデストラクタで
++    // _aligned_free()を使う必要がある(通常のfree()は不可)。
++    d_aligned_buffer = _aligned_malloc(d_simd_size * d_ldpc->code_len(), d_simd_size);
++#else
+     d_aligned_buffer = aligned_alloc(d_simd_size, d_simd_size * d_ldpc->code_len());
++#endif
+     if (outputmode == OM_MESSAGE) {
+         set_output_multiple(d_kldpc_bytes * d_simd_size);
+         set_relative_rate((double)d_kldpc_bytes / d_nldpc);
+@@ -372,7 +382,11 @@ ldpc_decoder_bb_impl::ldpc_decoder_bb_impl(dvb_standard_t standard,
+  */
+ ldpc_decoder_bb_impl::~ldpc_decoder_bb_impl()
+ {
++#ifdef _MSC_VER
++    _aligned_free(d_aligned_buffer);
++#else
+     free(d_aligned_buffer);
++#endif
+     delete[] d_soft;
+     delete d_ldpc;
+ }
+diff --git a/lib/ldpc_decoder_bb_impl.h b/lib/ldpc_decoder_bb_impl.h
+index 25162b2..2c17039 100644
+--- a/lib/ldpc_decoder_bb_impl.h
++++ b/lib/ldpc_decoder_bb_impl.h
+@@ -60,7 +60,14 @@ public:
+                      gr_vector_const_void_star& input_items,
+                      gr_vector_void_star& output_items);
+ 
+-    unsigned int get_average_trials() { return d_total_trials / d_batch_cnt; }
++    // ★Pre-existing bug (not Windows-specific, but only ever crashes here in
++    // practice): before any LDPC batch is decoded (d_batch_cnt==0, e.g. no
++    // PL lock yet), this divided by zero -> STATUS_INTEGER_DIVIDE_BY_ZERO.
++    // On real hardware PL lock (and hence the first LDPC batch) normally
++    // completes well within the first status-print interval, so this path
++    // is rarely exercised, but any session that hasn't locked yet by the
++    // first status tick hits it deterministically.
++    unsigned int get_average_trials() { return d_batch_cnt ? d_total_trials / d_batch_cnt : 0; }
+ };
+ 
+ } // namespace dvbs2rx
+diff --git a/lib/xfecframe_demapper_cb_impl.cc b/lib/xfecframe_demapper_cb_impl.cc
+index d12e267..5098fed 100644
+--- a/lib/xfecframe_demapper_cb_impl.cc
++++ b/lib/xfecframe_demapper_cb_impl.cc
+@@ -10,6 +10,7 @@
+ #include "xfecframe_demapper_cb_impl.h"
+ #include <gnuradio/io_signature.h>
+ #include <gnuradio/pdu.h>
++#include <cassert>
+ 
+ namespace gr {
+ namespace dvbs2rx {
+@@ -108,7 +109,10 @@ int xfecframe_demapper_cb_impl::general_work(int noutput_items,
+     auto out = static_cast<int8_t*>(output_items[0]);
+     const int n_mod = d_mod->bits();
+     const int n_frames = noutput_items / d_fecframe_len;
+-    int8_t tmp[n_mod];
++    // n_modはDVB-S2の最大変調(64APSK)でも6止まりなので、MSVCがVLAを持たない
++    // 問題を避けるため実用上十分な固定長バッファにしている(可変長配列ではない)。
++    assert(n_mod <= 8);
++    int8_t tmp[8];
+     int consumed = 0;
+     static constexpr float Es = 1.0; // assume unitary symbol energy
+ 
