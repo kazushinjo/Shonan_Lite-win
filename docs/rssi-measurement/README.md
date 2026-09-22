@@ -1,12 +1,12 @@
-# 相手局検索(AFC)の変更仕様 / Find Station (AFC) change specification
+# RSSI測定の変更仕様 / RSSI Measurement change specification
 
-Shonan_Lite for Windows v1.1.0 で行った相手局検索画面の変更を、他の版(Pi 5 版、Android 版、iPad 版など)へ
+Shonan_Lite for Windows v1.1.0 で行ったRSSI測定画面の変更を、他の版(Pi 5 版、Android 版、iPad 版など)へ
 同じ仕様で移植できるよう記録したもの。  
-A record of the changes made to the Find Station screen in Shonan_Lite for Windows v1.1.0, so the same specification can be
+A record of the changes made to the RSSI Measurement screen in Shonan_Lite for Windows v1.1.0, so the same specification can be
 ported to the other editions (Pi 5, Android, iPad, ...).
 
-- 実装 / Implementation: [`app/gui/screens/afc.py`](../../app/gui/screens/afc.py)、[`app/gui/settings_store.py`](../../app/gui/settings_store.py)
-- 差分 / Patch: [`afc-changes.patch`](afc-changes.patch)(下記の 4 コミット分 / the 4 commits below)
+- 実装 / Implementation: [`app/gui/screens/rssi.py`](../../app/gui/screens/rssi.py)、[`app/gui/settings_store.py`](../../app/gui/settings_store.py)
+- 差分 / Patch: [`rssi-changes.patch`](rssi-changes.patch)(下記の 4 コミット分 / the 4 commits below)
 - 検証状況 / Verification: 偽の `iio_attr` を使ったテストのみ。**実機の Pluto では未検証。**  
   Tested only with a fake `iio_attr`. **Not yet verified on a real Pluto.**
 
@@ -54,12 +54,12 @@ RXゲイン / RX Gain                  [AGC]  [ − ]  60 dB  [ + ]
 
 | 項目 / Field | 型 / Type | 既定 / Default | 意味 / Meaning |
 | --- | --- | --- | --- |
-| `afc_repeat_scan` (**新規 / new**) | bool | `true` | true=連続、false=1回 / true = Repeat, false = Once |
+| `rssi_repeat_scan` (**新規 / new**) | bool | `true` | true=連続、false=1回 / true = Repeat, false = Once |
 | `rx_agc_enabled` (既存 / existing) | bool | `false` | AGC の ON/OFF |
 | `rx_gain_db` (既存 / existing) | int | `60` | 手動ゲイン 0〜73 dB。AGC OFF のときのみ有効 |
 
-`afc_repeat_scan` が無い旧設定ファイルは既定値(連続)で読み込む(既存の読み込み処理が、無いキーを既定値で補う)。  
-A legacy settings file without `afc_repeat_scan` loads with the default (Repeat).
+`rssi_repeat_scan` が無い旧設定ファイルは既定値(連続)で読み込む(既存の読み込み処理が、無いキーを既定値で補う)。  
+A legacy settings file without `rssi_repeat_scan` loads with the default (Repeat).
 
 RXゲイン画面と検索画面は同じ `rx_agc_enabled` / `rx_gain_db` を共有する。画面表示時(`on_show`)に、設定値から
 コントロールを再読み込みすること。  
@@ -88,7 +88,7 @@ beginSweep():                             # 1周(開始→終了)の開始 / sta
 
 scanStep():                               # 150msごと / every 150 ms
     if currentFreq > endFreq:             # 1周終わり / end of a pass
-        if not afc_repeat_scan:           # 「1回」/ Once
+        if not rssi_repeat_scan:          # 「1回」/ Once
             stop(); return
         commitScanResult()                # 「連続」/ Repeat
         beginSweep(); return
@@ -185,7 +185,7 @@ On Windows these were checked with a headless test that replaces `iio_attr` with
 8. AGC ON: `slow_attack` を設定し、−/+ が無効。OFF: `manual` + `hardwaregain` / AGC on disables −/+ and sets `slow_attack`; off sets `manual` + `hardwaregain`.
 9. ゲインは 0〜73 dB にクランプ / Gain is clamped to 0–73 dB.
 10. Pluto に届かない場合(タイムアウト)でも落ちず、周回もやり直さない / An unreachable Pluto neither crashes nor restarts the pass.
-11. 設定ファイルに `afc_repeat_scan` が無くても「連続」で読み込む / A settings file without `afc_repeat_scan` loads as Repeat.
+11. 設定ファイルに `rssi_repeat_scan` が無くても「連続」で読み込む / A settings file without `rssi_repeat_scan` loads as Repeat.
 
 ## 8. 移植手順 / How to port
 
@@ -193,14 +193,14 @@ On Windows these were checked with a headless test that replaces `iio_attr` with
   このリポジトリでは `app/` だが、Pi 5 版のリポジトリでは `pi5/` の場合がある。  
   Apply the patch in this folder. It uses `app/`; a Pi 5 repository may use `pi5/` instead.
   ```powershell
-  git apply --directory=pi5 docs/afc-find-station/afc-changes.patch   # pi5/ の場合 / for a pi5/ layout
+  git apply --directory=pi5 docs/rssi-measurement/rssi-changes.patch   # pi5/ の場合 / for a pi5/ layout
   ```
-  適用後、`afc.py` 内の `Pluto+` 表記など版ごとの差異は手で合わせる。  
+  適用後、`rssi.py` 内の `Pluto+` 表記など版ごとの差異は手で合わせる。  
   After applying, reconcile edition-specific differences by hand.
-- **Android / iPad 版:** 3〜5章の動作をそのまま実装する。UI は各プラットフォームの部品で構わない。設定は `afc_repeat_scan`
+- **Android / iPad 版:** 3〜5章の動作をそのまま実装する。UI は各プラットフォームの部品で構わない。設定は `rssi_repeat_scan`
   (Boolean、既定 true)を追加し、RXゲインは既存の設定値を共有する。Pluto の操作は6章の属性を libiio 経由で行う。  
-  Implement chapters 3–5 as described; the UI may use each platform's own widgets. Add the `afc_repeat_scan` Boolean setting (default true),
+  Implement chapters 3–5 as described; the UI may use each platform's own widgets. Add the `rssi_repeat_scan` Boolean setting (default true),
   share the existing RX gain settings, and access Pluto through libiio using the attributes in chapter 6.
 - **操作説明書 / Manuals:** 「検索方法」「RXゲイン」の説明を追加し、「新中心周波数」の記述を削除する。文言は
-  [`manual_content_win.py`](../../app/gui/manual_content_win.py) と [`manual_content_win_en.py`](../../app/gui/manual_content_win_en.py) の相手局検索の章を参照。  
-  Add descriptions of "Search Mode" and "RX Gain" and remove the "Set as Center" text; see the Find Station chapter of the two files above for the wording.
+  [`manual_content_win.py`](../../app/gui/manual_content_win.py) と [`manual_content_win_en.py`](../../app/gui/manual_content_win_en.py) のRSSI測定の章を参照。  
+  Add descriptions of "Search Mode" and "RX Gain" and remove the "Set as Center" text; see the RSSI Measurement chapter of the two files above for the wording.

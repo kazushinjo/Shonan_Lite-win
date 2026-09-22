@@ -492,7 +492,7 @@ REQUIRED_FILES=(
   "$GUI_DIR/backend.py"
   "$GUI_DIR/boot_menu.py"
   "$GUI_DIR/screens/videosource.py"
-  "$GUI_DIR/screens/afc.py"
+  "$GUI_DIR/screens/rssi.py"
   "$GUI_DIR/qml/InputPanelWrapper.qml"
   "$INSTALL_DIR/app/assets/test_pattern_ipad.png"
 )

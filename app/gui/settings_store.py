@@ -160,8 +160,8 @@ class AppSettings:
     rx_agc_enabled: bool = False
     rx_gain_db: int = 60  # 0..73、AGC OFF時のみ有効
 
-    # 相手局検索(AFC): True=「検索停止」が押されるまで繰り返す(連続)、False=範囲の終わりまで1回で自動停止
-    afc_repeat_scan: bool = True
+    # RSSI測定: True=「検索停止」が押されるまで繰り返す(連続)、False=範囲の終わりまで1回で自動停止
+    rssi_repeat_scan: bool = True
 
     # TX出力
     tx_power_db: float = 0.0  # -70..0、0=最大出力（40 dB外部アッテネータ試験の既定）

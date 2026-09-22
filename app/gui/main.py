@@ -47,7 +47,7 @@ MCU1_GPIO26_ON_DELAY_MS = 5_000
 MCU1_GPIO26_OFF_DELAY_SEC = 3
 
 SCREEN_ROUTES = [
-    "home", "tx", "rx", "frequency", "afc", "symbolrate", "fec", "modulation",
+    "home", "tx", "rx", "frequency", "rssi", "symbolrate", "fec", "modulation",
     "videosource", "streamoutput", "rxgain", "txpower", "manual", "settings",
     "testequipment", "presets",
 ]
@@ -238,13 +238,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def _build_screens(self) -> None:
         # 各screens.*モジュールは create(main_window) -> QWidget を提供する規約にする。
         from screens import (
-            afc, fec, frequency, home, manual, modulation, rx, rxgain,
+            rssi, fec, frequency, home, manual, modulation, rx, rxgain,
             settings as settings_screen, streamoutput, symbolrate,
             testequipment, tx, txpower, videosource, presets,
         )
 
         self._screen_modules = {
-            "home": home, "tx": tx, "rx": rx, "frequency": frequency, "afc": afc,
+            "home": home, "tx": tx, "rx": rx, "frequency": frequency, "rssi": rssi,
             "symbolrate": symbolrate, "fec": fec, "modulation": modulation,
             "videosource": videosource, "streamoutput": streamoutput,
             "rxgain": rxgain, "txpower": txpower, "manual": manual,
