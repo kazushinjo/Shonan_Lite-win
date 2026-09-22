@@ -18,7 +18,11 @@ if not exist "%RADIOCONDA%\python.exe" (
 )
 
 if not exist "%VS_BUILDTOOLS%\VC\Auxiliary\Build\vcvars64.bat" (
-  echo ERROR: VS Build Tools C++ workload not found at %VS_BUILDTOOLS%
+  REM ★%VS_BUILDTOOLS%は"(x86)"を含むため、%展開(ブロック解析時に丸ごと展開される)
+  REM だとこのif/elseブロック全体の丸括弧の対応が崩れて後続行が構文エラーになる
+  REM (実機で確認済み: "\Microsoft was unexpected at this time.")。遅延展開の
+  REM !VAR!(実行時に1行ずつ展開)を使うことで回避する。
+  echo ERROR: VS Build Tools C++ workload not found at !VS_BUILDTOOLS!
   echo Install "Desktop development with C++" via the Visual Studio Installer first.
   exit /b 1
 )
@@ -41,10 +45,16 @@ if not exist "%GR_DVBS2RX_SRC%" (
   )
   popd
 ) else (
-  echo %GR_DVBS2RX_SRC% already exists, using it as-is (not re-cloning/re-patching).
+  REM Note: literal parentheses in an unquoted echo break cmd's block parser
+  REM when inside an if/else block, so keep this message parenthesis-free.
+  echo %GR_DVBS2RX_SRC% already exists, using it as-is - not re-cloning or re-patching.
 )
 
 call "%VS_BUILDTOOLS%\VC\Auxiliary\Build\vcvars64.bat"
+REM cmake/ninja are resolved via PATH: radioconda's own copies (if `conda
+REM install cmake ninja` was run there) take priority since they're
+REM prepended here, but a system-wide install (e.g. via winget/pip) on the
+REM tail-appended %PATH% works too - no need for both.
 set PATH=%RADIOCONDA%;%RADIOCONDA%\Library\bin;%RADIOCONDA%\Scripts;%PATH%
 
 cd /d "%GR_DVBS2RX_SRC%"
@@ -52,7 +62,7 @@ if exist build rmdir /s /q build
 mkdir build
 cd build
 
-"%RADIOCONDA%\Library\bin\cmake.exe" -G Ninja ^
+cmake -G Ninja ^
   -DCMAKE_BUILD_TYPE=Release ^
   -DCMAKE_INSTALL_PREFIX=%RADIOCONDA%\Library ^
   -DGR_PYTHON_DIR=%RADIOCONDA%\Lib\site-packages ^
@@ -66,13 +76,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
-"%RADIOCONDA%\Library\bin\ninja.exe"
+cmake --build .
 if errorlevel 1 (
   echo BUILD FAILED
   exit /b 1
 )
 
-"%RADIOCONDA%\Library\bin\ninja.exe" install
+cmake --install .
 if errorlevel 1 (
   echo INSTALL FAILED
   exit /b 1
