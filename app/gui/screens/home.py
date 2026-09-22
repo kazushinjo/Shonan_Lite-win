@@ -21,7 +21,7 @@ _BUTTONS = [
     ("送信", "Transmit", "tx"),
     ("受信", "Receive", "rx"),
     ("周波数", "Frequency", "frequency"),
-    ("相手局検索", "Find Station", "afc"),
+    ("RSSI測定", "RSSI Measurement", "rssi"),
     ("シンボルレート", "Symbol Rate", "symbolrate"),
     ("誤り訂正", "FEC", "fec"),
     ("変調方式", "Modulation", "modulation"),
@@ -38,6 +38,13 @@ _BUTTONS = [
     ("プリセット", "Presets", "presets"),
     ("Pluto電源", "Pluto Power", "pluto_power_cycle"),
 ]
+
+# ホーム画面カードの文字サイズ(背景画像に元々焼き込まれていた比率に合わせる:
+# 日本語は大きく、英語(2行目)は約6割の小さめサイズ、英語UIのみの1行表示は
+# 日本語版の英語1行カード(App Restart等)と同じ中間サイズ)。
+_CARD_JA_PX = 26
+_CARD_EN_SUB_PX = 15
+_CARD_EN_ONLY_PX = 22
 
 # Pluto+のdatvplutofrmファームウェアの既定rootクレデンシャル(Dropbear SSH)。
 _PLUTO_SSH_USER = "root"
@@ -278,6 +285,26 @@ class HomeScreen(QtWidgets.QWidget):
         datv_label.setAlignment(QtCore.Qt.AlignRight)
         outer.addWidget(datv_label)
 
+    def _add_card_label(self, canvas, japanese: str, english_text: str, rect,
+                         english_only: bool) -> QtWidgets.QLabel:
+        """背景画像に焼き込まれたカード文字を隠し、Qtで描画し直す。
+
+        日本語UIでは「日本語(大)+英語(小)」の2行、英語UIでは英語1行のみを表示し、
+        全カードで同じフォントサイズ比になるようにする(_position_mock_home()で
+        キャンバスサイズに応じてpxを再計算する)。
+        """
+        label = QtWidgets.QLabel(canvas)
+        label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        label.setStyleSheet("QLabel { background-color: rgba(3, 16, 34, 255); padding-left: 4px; }")
+        label.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        label._mock_rect = rect
+        label._card_japanese = japanese
+        label._card_english = english_text
+        label._card_english_only = english_only
+        self._mock_overlays.append(label)
+        self._card_labels.append(label)
+        return label
+
     def _build_illustrated_home(self) -> bool:
         """モック画像を表示し、その上に透明な実ボタンを重ねる。
 
@@ -319,6 +346,7 @@ class HomeScreen(QtWidgets.QWidget):
         # 都度設定し直す(self._scaled_font_labelsに登録)。
         self._mock_overlays = []
         self._scaled_font_labels = []
+        self._card_labels = []
 
         # 背景画像に焼き込まれたタイトル「Shonan_Lite for RasPI5」はWindows版でも
         # 共通のモック画像を使い回すため、Windows実行時のみ黒帯で隠して
@@ -350,41 +378,22 @@ class HomeScreen(QtWidgets.QWidget):
             self._mock_overlays.append(title_label)
             self._title_label = title_label
 
-        restart_label = QtWidgets.QLabel("App Restart" if english else "アプリ再起動\nApp Restart", canvas)
-        restart_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        restart_label._base_qss = (
-            "QLabel { background-color: rgba(3, 16, 34, 245); color: white; padding-left: 4px;")
-        restart_label.setStyleSheet(restart_label._base_qss + " }")
-        restart_label.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        # ★旧「Pluto再起動/Pluto Reboot」の文字部分(実測x826-1017,y600-680程度)
-        # だけを覆う。カード全体(752,587,298,111)ぴったりに合わせると、この
-        # 白い矩形の角がカードの丸みを帯びた枠線にかぶさって「外枠が欠けて
-        # 見える」ため、枠線には触れない内側だけを覆う(実機で確認済みの不具合)。
-        restart_label._mock_rect = (824, 592, 204, 94)
-        self._mock_overlays.append(restart_label)
-        self._scaled_font_labels.append((restart_label, 22 if english else 26))
+        # ★旧「Pluto再起動/Pluto Reboot」の文字部分だけを覆う。カード全体
+        # (752,587,298,111)ぴったりに合わせると、白い矩形の角がカードの丸みを
+        # 帯びた枠線にかぶさって「外枠が欠けて見える」ため、枠線には触れない
+        # 内側だけを覆う(実機で確認済みの不具合)。
+        self._add_card_label(canvas, "アプリ再起動", "App Restart", (824, 592, 204, 94), english)
 
         # 背景画像に焼き込まれた旧「電源オフ/Power Off」表示を隠し、
-        # 「アプリ終了/Exit App」に差し替える(restart_labelと同じ手法)。
-        exit_label = QtWidgets.QLabel("Exit App" if english else "アプリ終了\nExit App", canvas)
-        exit_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        exit_label._base_qss = (
-            "QLabel { background-color: rgba(3, 16, 34, 245); color: white; padding-left: 4px;")
-        exit_label.setStyleSheet(exit_label._base_qss + " }")
-        exit_label.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        # restart_labelと同じ理由でカード枠線には触れない内側だけを覆う。
-        exit_label._mock_rect = (1150, 594, 170, 80)
-        self._mock_overlays.append(exit_label)
-        self._scaled_font_labels.append((exit_label, 22 if english else 26))
+        # 「アプリ終了/Exit App」に差し替える(restart_labelと同じ理由で内側だけを覆う)。
+        self._add_card_label(canvas, "アプリ終了", "Exit App", (1150, 594, 170, 80), english)
 
-        fec_clear = QtWidgets.QLabel(canvas)
-        fec_clear.setStyleSheet("background-color: rgba(3, 16, 34, 245);")
-        fec_clear.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        # ★旧「FEC/FEC」の文字部分(実測x434-494,y337-397)だけを覆う。
-        # restart_label/exit_labelと同じ理由でカード全体(414,320,315,111)
-        # ぴったりには合わせない(枠線の丸みにかぶさって欠けて見えるため)。
-        fec_clear._mock_rect = (420, 326, 100, 82)
-        self._mock_overlays.append(fec_clear)
+        # 背景画像に焼き込まれた旧「相手局検索/Find Station」表示を隠し、
+        # 「RSSI測定/RSSI」に差し替える。アイコン(虫眼鏡)は焼き込みのまま流用し、
+        # 文字部分だけを覆う。他カードとフォントサイズを揃えるため、カードが
+        # 狭く"RSSI Measurement"は収まらないので"RSSI"に短縮する(正式名称は
+        # 遷移先画面のタイトル・マニュアルに表示される)。
+        self._add_card_label(canvas, "RSSI測定", "RSSI", (1145, 197, 168, 86), english)
 
         fec_icon = FecCheckIcon(canvas)
         fec_icon.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
@@ -392,14 +401,39 @@ class HomeScreen(QtWidgets.QWidget):
         fec_icon._mock_rect = (450, 349, 44, 44)
         self._mock_overlays.append(fec_icon)
 
-        fec_label = QtWidgets.QLabel("FEC" if english else "誤り訂正\nFEC", canvas)
-        fec_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        fec_label._base_qss = "QLabel { background: transparent; color: white; padding-left: 4px;"
-        fec_label.setStyleSheet(fec_label._base_qss + " }")
-        fec_label.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        fec_label._mock_rect = (505, 337, 160, 72)
-        self._mock_overlays.append(fec_label)
-        self._scaled_font_labels.append((fec_label, 22 if english else 26))
+        # ★旧「FEC/FEC」の文字・アイコン部分だけを覆う(restart_labelと同じ理由で
+        # カード全体(414,320,315,111)ぴったりには合わせない)。
+        fec_clear = QtWidgets.QLabel(canvas)
+        fec_clear.setStyleSheet("background-color: rgba(3, 16, 34, 255);")
+        fec_clear.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        fec_clear._mock_rect = (420, 326, 100, 82)
+        self._mock_overlays.append(fec_clear)
+        fec_icon.raise_()
+
+        self._add_card_label(canvas, "誤り訂正", "FEC", (505, 337, 160, 72), english)
+
+        # 背景画像に焼き込まれた他のカード文字も同じ手法でQt描画へ統一し、
+        # 全カードでフォント・サイズ比(日本語大・英語小)を揃える。
+        for route, rect in {
+            "tx": (162, 197, 206, 86),
+            "rx": (499, 197, 204, 86),
+            "symbolrate": (162, 329, 206, 86),
+            "modulation": (840, 329, 183, 86),
+            "videosource": (1145, 329, 168, 86),
+            "streamoutput": (162, 463, 206, 86),
+            "rxgain": (499, 463, 204, 86),
+            "txpower": (840, 463, 183, 86),
+            "settings": (1144, 463, 169, 86),
+            "testequipment": (162, 596, 206, 85),
+            "manual": (499, 596, 204, 85),
+        }.items():
+            ja, en = next((b[0], b[1]) for b in _BUTTONS if b[2] == route)
+            self._add_card_label(canvas, ja, en, rect, english)
+
+        # 「周波数」カードのタイトル部分(値の上の行)を他カードと同じ手法・
+        # サイズ比でQt描画へ差し替える。値表示部分(下記freq_value_label)には
+        # かからない高さに抑える。
+        self._add_card_label(canvas, "周波数", "Frequency", (840, 197, 183, 54), english)
 
         # 背景画像に焼き込まれた「周波数」カードのプレースホルダー値「437000 kHz」
         # (グロー込みの実測x818-1013,y255-288程度)を隠し、on_show()で実際の設定値に
@@ -520,6 +554,24 @@ class HomeScreen(QtWidgets.QWidget):
         for label, base_px in getattr(self, "_scaled_font_labels", []):
             px = max(10, round(base_px * width / native_w))
             label.setStyleSheet(f"{label._base_qss} font-size: {px}px; }}")
+
+        # ホームカードの文字(_add_card_label): 日本語UIは「日本語(大)+英語(小)」の
+        # 2行、英語UIは英語1行のみをリッチテキストで描画し、全カードで同じ
+        # フォントサイズ比になるようにする。
+        for label in getattr(self, "_card_labels", []):
+            if label._card_english_only:
+                px = max(10, round(_CARD_EN_ONLY_PX * width / native_w))
+                label.setTextFormat(QtCore.Qt.RichText)
+                label.setText(f'<span style="color:white; font-size:{px}px;">'
+                              f'{label._card_english}</span>')
+            else:
+                px_ja = max(10, round(_CARD_JA_PX * width / native_w))
+                px_en = max(8, round(_CARD_EN_SUB_PX * width / native_w))
+                label.setTextFormat(QtCore.Qt.RichText)
+                label.setText(f'<span style="color:white; font-size:{px_ja}px;">'
+                              f'{label._card_japanese}</span><br>'
+                              f'<span style="color:white; font-size:{px_en}px;">'
+                              f'{label._card_english}</span>')
 
         title_label = getattr(self, "_title_label", None)
         if title_label is not None:

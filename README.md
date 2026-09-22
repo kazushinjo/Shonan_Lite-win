@@ -11,7 +11,7 @@
   実測ビットレート・パケット数/エラー数をリアルタイム表示。  
   On-device demodulation with GNU Radio (gr-dvbs2rx). The LOCK state, measured bitrate and
   packet/error counts are shown in real time.
-- **相手局検索(AFC) / Find station (AFC)**: 指定レンジ(±5/10/20MHz)をスキャンし、RSSIグラフと
+- **RSSI測定 / RSSI measurement**: 指定レンジ(±5/10/20MHz)をスキャンし、RSSIグラフと
   中心周波数の表示で相手局の実際の周波数を素早く特定できる。  
   Scans a chosen range (±5/10/20 MHz) and quickly identifies the other station's actual frequency
   with an RSSI graph and the center-frequency marker.
@@ -56,9 +56,9 @@ Windows edition (captured during an actual Pluto TX→RX loopback check).
 | --- | --- |
 | ![Home画面](app/docs/images/screenshot_home_win.png) | ![送信画面](app/docs/images/screenshot_tx_win.png) |
 
-| 受信画面(RX、LOCK) / Receive (RX, LOCK) | 相手局検索(AFC) / Find station (AFC) |
+| 受信画面(RX、LOCK) / Receive (RX, LOCK) | RSSI測定 / RSSI measurement |
 | --- | --- |
-| ![受信画面](app/docs/images/screenshot_rx_win.png) | ![相手局検索](app/docs/images/screenshot_afc_win.jpg) |
+| ![受信画面](app/docs/images/screenshot_rx_win.png) | ![RSSI測定](app/docs/images/screenshot_rssi_win.jpg) |
 
 ## インストール / Installation
 
@@ -234,10 +234,10 @@ The shortest procedure to check transmission and reception on a Windows PC by lo
 
     ![受信LOCK](app/docs/images/screenshot_rx_win.png)
 
-これで送受信の基本動作が確認できる。相手局検索(AFC)で実際にTX信号のピークをスキャンした例:  
-This confirms the basic TX/RX operation. Example of Find Station (AFC) actually scanning and finding the TX signal peak:
+これで送受信の基本動作が確認できる。RSSI測定で実際にTX信号のピークをスキャンした例:  
+This confirms the basic TX/RX operation. Example of RSSI Measurement actually scanning and finding the TX signal peak:
 
-![相手局検索](app/docs/images/screenshot_afc_win.jpg)
+![RSSI測定](app/docs/images/screenshot_rssi_win.jpg)
 
 ## Windows PC用実運用クイックスタートガイド / Windows PC real-operation quick start guide
 
@@ -297,8 +297,8 @@ TX and RX are used one at a time, not simultaneously).
   Complete installation manual for the distributed installer
 - [`docs/gr-dvbs2rx-windows/README.md`](docs/gr-dvbs2rx-windows/README.md) — gr-dvbs2rxを自分でビルドする手順(開発者向け) /  
   How to build gr-dvbs2rx yourself (for developers)
-- [`docs/afc-find-station/README.md`](docs/afc-find-station/README.md) — 相手局検索(AFC)の変更仕様と差分(他の版へ移植する際の記録) /  
-  Find Station (AFC) change specification and patch (a record for porting to other editions)
+- [`docs/rssi-measurement/README.md`](docs/rssi-measurement/README.md) — RSSI測定の変更仕様と差分(他の版へ移植する際の記録) /  
+  RSSI Measurement change specification and patch (a record for porting to other editions)
 - 操作説明書(Word) / Operation manual (Word): `app/docs/shonan_lite_win_operation_manual.docx`(日本語 / Japanese),  
   `app/docs/shonan_lite_win_operation_manual_en.docx`(English) —
   生成スクリプト / generator: [`app/docs/build_operation_manual_win.py`](app/docs/build_operation_manual_win.py)

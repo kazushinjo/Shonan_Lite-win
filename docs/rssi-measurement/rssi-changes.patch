@@ -3,8 +3,8 @@ index 6dd8346..5c0c7e4 100644
 --- a/app/gui/manual_content_win.py
 +++ b/app/gui/manual_content_win.py
 @@ -74,8 +74,9 @@ MANUAL_SECTIONS_WIN = [
-     ("7. 相手局検索(AFC)", [
-         ("相手局検索とは", "指定した範囲の周波数をスキャンして受信レベル(RSSI)をグラフ表示し、相手局の実際の周波数を素早く特定する機能です。中心周波数は周波数画面で設定した値です(未設定の場合は先に周波数画面で設定してください)。"),
+     ("7. RSSI測定", [
+         ("RSSI測定とは", "指定した範囲の周波数をスキャンして受信レベル(RSSI)をグラフ表示し、相手局の実際の周波数を素早く特定する機能です。中心周波数は周波数画面で設定した値です(未設定の場合は先に周波数画面で設定してください)。"),
          ("検索条件", "検索レンジを「±5MHz」「±10MHz」「±20MHz」から選びます(選択中のレンジは水色で強調されます)。ステップ(kHz)はテンキーで入力し、1 kHz以上を指定します。"),
 -        ("検索の実行", "「検索開始」を押すとスキャンを開始し、進行中はステータスに現在の周波数とRSSIが表示されます。スキャン中は「検索停止」で中断できます。グラフには中心周波数の位置が白線で表示されます。"),
 -        ("結果の反映", "検索が終わると「最も強い周波数」が表示されます。「新中心周波数」を押すと、その周波数を運用周波数として設定します。"),
@@ -19,8 +19,8 @@ index ae33fa7..45850f7 100644
 --- a/app/gui/manual_content_win_en.py
 +++ b/app/gui/manual_content_win_en.py
 @@ -61,8 +61,9 @@ MANUAL_SECTIONS_WIN_EN = [
-     ("7. Find Station (AFC)", [
-         ("What Find Station does", "It scans a range of frequencies, graphs the received level (RSSI) and quickly identifies the actual frequency of the other station. The center frequency is the value set on the Frequency screen (if it is not set, set it there first)."),
+     ("7. RSSI Measurement", [
+         ("What RSSI Measurement does", "It scans a range of frequencies, graphs the received level (RSSI) and quickly identifies the actual frequency of the other station. The center frequency is the value set on the Frequency screen (if it is not set, set it there first)."),
          ("Search conditions", "Choose the search range from ±5 MHz, ±10 MHz and ±20 MHz (the selected range is highlighted in light blue). Enter the step (kHz) with the keypad; specify 1 kHz or more."),
 -        ("Running a search", "Press \"Start Search\" to begin scanning; while it runs, the status shows the current frequency and RSSI. Press \"Stop Search\" to interrupt the scan. The graph shows the position of the center frequency as a white line."),
 -        ("Applying the result", "When the search finishes, the \"Strongest frequency\" is shown. Press \"Set as Center\" to set that frequency as the operating frequency."),
@@ -30,10 +30,10 @@ index ae33fa7..45850f7 100644
      ]),
      ("8. Basic Operating Procedure", [
          ("TX only", "1) On Home, set Frequency, Symbol Rate, FEC, Modulation, Video Source and TX Power. 2) Press \"Transmit\". 3) Check the video preview on the TX screen. 4) Press \"Start TX\". 5) Press \"Stop TX\" when finished."),
-diff --git a/app/gui/screens/afc.py b/app/gui/screens/afc.py
+diff --git a/app/gui/screens/rssi.py b/app/gui/screens/rssi.py
 index 646c667..2871fed 100644
---- a/app/gui/screens/afc.py
-+++ b/app/gui/screens/afc.py
+--- a/app/gui/screens/rssi.py
++++ b/app/gui/screens/rssi.py
 @@ -11,6 +11,9 @@ from i18n import tr
  
  IIO_ATTR_BIN = platform_compat.find_binary("iio_attr", "/usr/bin/iio_attr")
@@ -44,7 +44,7 @@ index 646c667..2871fed 100644
  
  
  class RssiGraphWidget(QtWidgets.QWidget):
-@@ -148,6 +151,7 @@ class AfcScreen(SettingsSubScreen):
+@@ -148,6 +151,7 @@ class RssiScreen(SettingsSubScreen):
          # 場合を除き)TXも停止する。
          self._tx_started_by_scan = False
          self._current_freq = 0
@@ -52,7 +52,7 @@ index 646c667..2871fed 100644
          self._end_freq = 0
          self._step_hz = 10_000
          self._best_rssi = None
-@@ -274,14 +278,75 @@ class AfcScreen(SettingsSubScreen):
+@@ -274,14 +278,75 @@ class RssiScreen(SettingsSubScreen):
          self.best_freq_label.setStyleSheet("color: #eeeeee; font-size: 24px; font-weight: bold;")
          best_row.addWidget(self.best_freq_label)
          best_row.addStretch(1)
@@ -135,7 +135,7 @@ index 646c667..2871fed 100644
          columns.addWidget(right, 2)
  
          bottom = QtWidgets.QHBoxLayout()
-@@ -297,6 +362,8 @@ class AfcScreen(SettingsSubScreen):
+@@ -297,6 +362,8 @@ class RssiScreen(SettingsSubScreen):
  
      def on_show(self) -> None:
          self._update_center_label()
@@ -144,7 +144,7 @@ index 646c667..2871fed 100644
          # 画面遷移のたびに、周波数画面で設定した運用周波数を中心とした範囲を
          # 自動的に取り込む(既定は±10MHz。他の幅が必要ならプリセットボタンで
          # 切り替え直す)。未設定の場合は既存の範囲欄をそのまま残す(警告は出さない
-@@ -392,14 +459,11 @@ class AfcScreen(SettingsSubScreen):
+@@ -392,14 +459,11 @@ class RssiScreen(SettingsSubScreen):
                  tr("ステップは1kHz以上で指定してください", "The step must be 1 kHz or more"))
              return
          settings = self.main_window.settings
@@ -162,21 +162,21 @@ index 646c667..2871fed 100644
          self._scanning = True
          self.status_label.setText(tr("検索中...", "Searching..."))
          self.search_btn.setText(tr("検索停止", "Stop Search"))
-@@ -438,6 +502,89 @@ class AfcScreen(SettingsSubScreen):
+@@ -438,6 +502,89 @@ class RssiScreen(SettingsSubScreen):
              self.main_window.tx_controller.stop()
          self.status_label.setText(tr("検索待機中", "Search idle"))
          self.search_btn.setText(tr("検索開始", "Start Search"))
 +        self._commit_scan_result()
 +
 +    def _load_scan_mode_controls(self) -> None:
-+        repeat = self.main_window.settings.afc_repeat_scan
++        repeat = self.main_window.settings.rssi_repeat_scan
 +        blocked = self.repeat_btn.blockSignals(True)
 +        self.repeat_btn.setChecked(repeat)
 +        self.once_btn.setChecked(not repeat)
 +        self.repeat_btn.blockSignals(blocked)
 +
 +    def _on_scan_mode_changed(self, repeat: bool) -> None:
-+        self.main_window.settings.afc_repeat_scan = repeat
++        self.main_window.settings.rssi_repeat_scan = repeat
 +        self.main_window.save_settings()
 +
 +    def _load_rx_gain_controls(self) -> None:
@@ -252,7 +252,7 @@ index 646c667..2871fed 100644
          if self._scan_best_freq is None or not self._scan_rssi_values:
              return
          spread = max(self._scan_rssi_values) - min(self._scan_rssi_values)
-@@ -450,23 +597,16 @@ class AfcScreen(SettingsSubScreen):
+@@ -450,23 +597,16 @@ class RssiScreen(SettingsSubScreen):
              tr(f"最も強い周波数: {self._best_freq / 1000:.0f} kHz (RSSI {self._best_rssi:g})",
                 f"Strongest frequency: {self._best_freq / 1000:.0f} kHz (RSSI {self._best_rssi:g})"))
  
@@ -273,7 +273,7 @@ index 646c667..2871fed 100644
      def _scan_step(self) -> None:
          if self._current_freq > self._end_freq:
 -            self._stop_scan()
-+            if not self.main_window.settings.afc_repeat_scan:
++            if not self.main_window.settings.rssi_repeat_scan:
 +                # 「1回」: 範囲の終わりで自動停止する(結果の確定は_stop_scan内)。
 +                self._stop_scan()
 +                return
@@ -292,8 +292,8 @@ index 766316d..a7c31b2 100644
      rx_agc_enabled: bool = False
      rx_gain_db: int = 60  # 0..73、AGC OFF時のみ有効
  
-+    # 相手局検索(AFC): True=「検索停止」が押されるまで繰り返す(連続)、False=範囲の終わりまで1回で自動停止
-+    afc_repeat_scan: bool = True
++    # RSSI測定: True=「検索停止」が押されるまで繰り返す(連続)、False=範囲の終わりまで1回で自動停止
++    rssi_repeat_scan: bool = True
 +
      # TX出力
      tx_power_db: float = 0.0  # -70..0、0=最大出力（40 dB外部アッテネータ試験の既定）

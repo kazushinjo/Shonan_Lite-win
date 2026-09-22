@@ -1,4 +1,4 @@
-"""モック4番カードに合わせた相手局検索画面。"""
+"""モック4番カードに合わせたRSSI測定画面。"""
 from __future__ import annotations
 
 import subprocess
@@ -132,7 +132,7 @@ class RssiGraphWidget(QtWidgets.QWidget):
         painter.drawEllipse(QtCore.QPointF(x_for(best_freq), y_for(best_rssi)), 2, 2)
 
 
-class AfcScreen(SettingsSubScreen):
+class RssiScreen(SettingsSubScreen):
     _EDIT_STYLE = "font-size: 29px; font-weight: bold; padding: 4px 6px;"
     _EDIT_STYLE_ACTIVE = _EDIT_STYLE + " border: 2px solid #0797bd;"
     _PRESET_STYLE = (
@@ -149,10 +149,10 @@ class AfcScreen(SettingsSubScreen):
     _PEAK_THRESHOLD_DB = 3.0
 
     def __init__(self, main_window):
-        super().__init__("相手局検索 / Find Station", lambda: main_window.navigate_to("home"))
+        super().__init__("RSSI測定 / RSSI Measurement", lambda: main_window.navigate_to("home"))
         self.main_window = main_window
         self._scanning = False
-        # ★オンデバイス復調ON時、相手局検索は自局のPluto+のRXを掃引するだけなので、
+        # ★オンデバイス復調ON時、RSSI測定は自局のPluto+のRXを掃引するだけなので、
         # 何も送信していない(=実局からの電波もない)状態ではRSSIが変化しない。
         # オンデバイス復調ONはTX/RX同時利用が前提のモードのため、検索開始と同時に
         # TXも自動的に開始し、検索停止と同時に(検索開始時にTXが既に動いていた
@@ -531,14 +531,14 @@ class AfcScreen(SettingsSubScreen):
         self._commit_scan_result()
 
     def _load_scan_mode_controls(self) -> None:
-        repeat = self.main_window.settings.afc_repeat_scan
+        repeat = self.main_window.settings.rssi_repeat_scan
         blocked = self.repeat_btn.blockSignals(True)
         self.repeat_btn.setChecked(repeat)
         self.once_btn.setChecked(not repeat)
         self.repeat_btn.blockSignals(blocked)
 
     def _on_scan_mode_changed(self, repeat: bool) -> None:
-        self.main_window.settings.afc_repeat_scan = repeat
+        self.main_window.settings.rssi_repeat_scan = repeat
         self.main_window.save_settings()
 
     def _load_rx_gain_controls(self) -> None:
@@ -625,7 +625,7 @@ class AfcScreen(SettingsSubScreen):
 
     def _scan_step(self) -> None:
         if self._current_freq > self._end_freq:
-            if not self.main_window.settings.afc_repeat_scan:
+            if not self.main_window.settings.rssi_repeat_scan:
                 # 「1回」: 範囲の終わりで自動停止する(結果の確定は_stop_scan内)。
                 self._stop_scan()
                 return
@@ -659,4 +659,4 @@ class AfcScreen(SettingsSubScreen):
 
 
 def create(main_window) -> QtWidgets.QWidget:
-    return AfcScreen(main_window)
+    return RssiScreen(main_window)

@@ -9,7 +9,7 @@ MANUAL_DATE = "2026-09-21"
 
 # Chapter title -> screenshot(s) in docs/images (a list is also accepted).
 MANUAL_SCREENSHOTS_WIN_EN: dict = {
-    "7. Find Station (AFC)": ["screenshot_afc_win.jpg"],
+    "7. RSSI Measurement": ["screenshot_rssi_win.jpg"],
 }
 
 MANUAL_SECTIONS_WIN_EN = [
@@ -24,7 +24,7 @@ MANUAL_SECTIONS_WIN_EN = [
         ("About behavior", "Behavior may differ depending on your environment, and undiscovered defects may remain."),
     ]),
     ("1. Screen Overview", [
-        ("Home screen", "The Home screen is the entrance to every function. It shows 16 cards: Transmit, Receive, Frequency, Find Station, Symbol Rate, FEC, Modulation, Video Source, Stream Output, RX Gain, TX Power, Config, Diagnostic, Help, App Restart and Exit App. The Frequency card shows the currently set frequency (kHz) and updates automatically when the frequency changes. The Windows edition does not show the Raspberry Pi-only Langstone (SDR transceiver), Presets and Pluto Power cards."),
+        ("Home screen", "The Home screen is the entrance to every function. It shows 16 cards: Transmit, Receive, Frequency, RSSI Measurement, Symbol Rate, FEC, Modulation, Video Source, Stream Output, RX Gain, TX Power, Config, Diagnostic, Help, App Restart and Exit App. The Frequency card shows the currently set frequency (kHz) and updates automatically when the frequency changes. The Windows edition does not show the Raspberry Pi-only Langstone (SDR transceiver), Presets and Pluto Power cards."),
         ("Common operation", "Operate each screen by clicking its buttons. Use \"Back to Home\" at the top left of a screen (or \"Back to Home\" at the bottom of the TX/RX screens) to return to the Home screen. Besides mouse and touch, text fields accept input from a physical keyboard and the standard Windows IME (the on-screen keyboard of the Pi 5 unit is not included in the Windows edition). The app is shown as a normal Windows window and can be resized."),
         ("Display language", "Switch between \"日本語\" and \"English\" with \"Display Language\" on the Settings screen. The change is applied to every screen immediately, and the choice is kept for the next launch."),
     ]),
@@ -65,8 +65,8 @@ MANUAL_SECTIONS_WIN_EN = [
         ("Volume", "Adjust the playback volume with the volume slider on the RX screen."),
         ("Navigation", "\"Go to TX\" is shown when on-device demodulation is ON. \"Settings\" and \"Back to Home\" are always available."),
     ]),
-    ("7. Find Station (AFC)", [
-        ("What Find Station does", "It scans a range of frequencies, graphs the received level (RSSI) and quickly identifies the actual frequency of the other station. The center frequency is the value set on the Frequency screen (if it is not set, set it there first)."),
+    ("7. RSSI Measurement", [
+        ("What RSSI Measurement does", "It scans a range of frequencies, graphs the received level (RSSI) and quickly identifies the actual frequency of the other station. The center frequency is the value set on the Frequency screen (if it is not set, set it there first)."),
         ("Search conditions", "Choose the search range from ±5 MHz, ±10 MHz and ±20 MHz (the selected range is highlighted in light blue). Enter the step (kHz) with the keypad; specify 1 kHz or more."),
         ("RX gain", "At the lower right of the screen, \"RX Gain\" lets you turn AGC (automatic adjustment) on or off and set the manual gain (0 to 73 dB with the \"−\" and \"+\" buttons; hold to change continuously). The setting is shared with the RX Gain screen and can be changed even while a search is running. Changing the gain changes the RSSI values, so if you change it during a search the current pass is restarted from the beginning. The manual gain cannot be changed while AGC is on."),
         ("Running a search", "Press \"Start Search\" to begin scanning; while it runs, the status shows the current frequency and RSSI. With \"Search Mode\" on the right side of the screen set to \"Repeat\" (default), the scan returns to the start when it reaches the end of the range and repeats until you press \"Stop Search\". With \"Once\", it scans the range one time and stops by itself. If you switch the mode during a search, it takes effect when the current pass finishes. In both modes the search stops when you move to another screen. The graph shows the position of the center frequency as a white line."),
@@ -75,7 +75,7 @@ MANUAL_SECTIONS_WIN_EN = [
     ]),
     ("8. Basic Operating Procedure", [
         ("TX only", "1) On Home, set Frequency, Symbol Rate, FEC, Modulation, Video Source and TX Power. 2) Press \"Transmit\". 3) Check the video preview on the TX screen. 4) Press \"Start TX\". 5) Press \"Stop TX\" when finished."),
-        ("RX only", "1) Match the receive conditions to the transmitting side. 2) If needed, identify the other station's frequency with \"Find Station\". 3) Press \"Receive\" on Home. 4) Press \"Start RX\" on the RX screen. 5) Check video, audio and statistics. 6) Press \"Stop RX\" when finished."),
+        ("RX only", "1) Match the receive conditions to the transmitting side. 2) If needed, identify the other station's frequency with \"RSSI Measurement\". 3) Press \"Receive\" on Home. 4) Press \"Start RX\" on the RX screen. 5) Check video, audio and statistics. 6) Press \"Stop RX\" when finished."),
         ("RF check", "Confirm the TX -> attenuator -> RX connection, then start reception after starting transmission. With on-device demodulation OFF they cannot run at the same time, so switch it ON in Settings for this check."),
     ]),
     ("9. Help, Diagnostic and App Restart", [
