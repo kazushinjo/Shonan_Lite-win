@@ -34,6 +34,22 @@ WindowsのdevポートではGNU Radioと必要なDVB-S2 OOTモジュールの公
    conda-forgeにはビルド済みの`gr-dvbs2rx`パッケージが**ありません**(radiocondaに最初から含まれる`gr-iio`とは異なります)。
 3. `git` (already required elsewhere in this project).  
    `git`(このプロジェクトの他の箇所でも必要です)。
+4. **`libboost-devel` and `pybind11` inside radioconda**, plus **`cmake`
+   and `ninja`** (either inside radioconda or anywhere on `PATH`). A plain
+   radioconda install only brings the Boost *runtime* DLLs
+   (`libboost-*`), not the C++ headers or CMake config files gr-dvbs2rx's
+   build needs, and does not include pybind11 or a build generator at all.
+   Install the missing pieces into radioconda with (pin the Boost version
+   to match radioconda's own `libboost` package, currently `1.86.0`):  
+   **radioconda内の`libboost-devel`と`pybind11`、および`cmake`と`ninja`**
+   (radioconda内でもPATH上のどこでも可)。radiocondaの標準導入では、Boostの
+   *実行用*DLL(`libboost-*`)のみが入り、gr-dvbs2rxのビルドに必要なC++ヘッダーや
+   CMake設定ファイルは入っていません。pybind11やビルドジェネレータも同梱されません。
+   以下でradioconda内に不足分を導入します(Boostのバージョンはradioconda自身の
+   `libboost`パッケージと合わせること。現時点では`1.86.0`):
+   ```
+   %USERPROFILE%\radioconda\Scripts\conda.exe install -y -c conda-forge libboost-devel=1.86.0 pybind11 cmake ninja
+   ```
 
 ## What's in this directory / このディレクトリの内容
 
