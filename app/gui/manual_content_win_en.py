@@ -4,7 +4,7 @@ Mirrors manual_content_win.py (Japanese) chapter for chapter and item for item.
 Keep the two files in sync when either changes. Written against v1.1.1 of the app.
 """
 
-MANUAL_VERSION = "1.1.5"
+MANUAL_VERSION = "1.1.6"
 MANUAL_DATE = "2026-09-21"
 
 # Chapter title -> screenshot(s) in docs/images (a list is also accepted).
