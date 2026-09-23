@@ -1,0 +1,22 @@
+#
+#!/bin/bash
+
+$HOME/Langstone/Screen_Message "Langstone Loading"
+sleep 2
+#Create command pipe
+if test -e /tmp/langstoneTRx ;then
+rm /tmp/langstoneTRx
+fi
+mkfifo /tmp/langstoneTRx
+
+#Test to see if the flowgraph is already running
+if !(ps -ax |grep -v grep| grep -q Lang_TRX_Hack.py) then
+   sudo amixer -c 2 cset numid=6 100%  > /dev/null 2>&1
+   sudo amixer -c 2 cset numid=8 50%  > /dev/null 2>&1
+#Start the GUI which will also start the GNURadio Module
+    $HOME/Langstone/GUI_Hack > /tmp/LangstoneGUI_Hack.log 2>&1
+else
+   echo Langstone is already running. Use ./stop first.
+   sleep 5
+fi
+

@@ -1,0 +1,12 @@
+# Shonan_Lite for Windows - GUI本体の実行に必要な最小限の依存関係。
+# ソースから実行する場合(README.mdの「GitHubからのインストール」参照):
+#   .venv-win\Scripts\pip install -r requirements-win.txt
+#
+# paramikoの暗号関連依存(bcrypt/cryptography/PyNaCl/cffi/pycparser)は
+# pipが自動的に解決してインストールするため、ここには含めない。
+# 受信復調(GNU Radio/gr-dvbs2rx)は別環境のradiocondaが必要
+# (docs/gr-dvbs2rx-windows/README.md参照。このrequirementsには含まれない)。
+PyQt5==5.15.11
+paramiko==5.0.0
+pillow==12.3.0
+psutil==7.2.2

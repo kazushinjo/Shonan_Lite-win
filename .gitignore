@@ -1,0 +1,46 @@
+.DS_Store
+
+# iOS
+ios/Tanzawa/.build/
+ios/Tanzawa/Frameworks/
+ios/Tanzawa/xcuserdata/
+ios/Tanzawa/DerivedData/
+*.xcuserstate
+
+# Android
+android/build/
+android/*/build/
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/*.iml
+android/.idea/
+android/.cxx/
+android/*/.cxx/
+
+# Android third_party: ビルド中間生成物のみ除外。成果物(ffmpeg-mpegts-install-arm64-v8a/、
+# dvbs2-deps-install-arm64-v8a/)は他プロジェクトの前例(ffmpeg-install-arm64-v8a/約12MB)に
+# 倣いgit管理下に置く。
+android/third_party/.build-tmp/
+android/third_party/.build-tmp-dvbs2/
+
+# Pi5 native build/runtime artifacts (依存ライブラリはPi5上で別途ビルド、
+# ~/shonan-pi5-native-build/参照。runtime/はrun_tx.shが実行時に生成)
+app/build/
+app/runtime/
+app/gui/__pycache__/
+app/gui/screens/__pycache__/
+app/rx/__pycache__/
+
+# KiCad local artifacts (プロジェクトを開くと自動生成される、環境依存のもの)
+**/.history/
+**/*-backups/
+**/~*.lck
+
+# Windows installer build artifacts (build_installer/内のビルド手順で再生成可能。
+# .spec/.issはソースなのでgit管理下に残す)
+build_installer/dist/
+build_installer/build/
+build_installer/output/
+build_installer/staging/
+build_installer/work/

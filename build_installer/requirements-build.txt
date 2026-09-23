@@ -1,0 +1,4 @@
+# Shonan_Lite for Windows - インストーラ(ShonanLiteSetup.exe)のビルドにのみ必要な依存関係。
+# GUI本体の実行だけならrequirements-win.txtで足りる。build_installer/README.mdを参照。
+# Extra dependency needed only to build the installer (ShonanLiteSetup.exe); see build_installer/README.md.
+pyinstaller==6.22.3
