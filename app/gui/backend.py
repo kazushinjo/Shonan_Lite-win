@@ -139,10 +139,10 @@ def _ffmpeg_filter_path(path: str) -> str:
     return f"'{escaped}'"
 _OVERLAY_IMAGE_NAME = "shonan_overlay.png"
 
-# 送信映像の解像度はHD(1280x720)固定。カメラの実キャプチャ解像度や画像ファイルの
-# 寸法・縦横比に関わらず、縦横比を保って縮小/拡大し、余白は黒で埋めて1280x720に揃える。
-TX_VIDEO_WIDTH = 1280
-TX_VIDEO_HEIGHT = 720
+# 送信映像の解像度はフルHD(1920x1080)固定。カメラの実キャプチャ解像度や画像ファイルの
+# 寸法・縦横比に関わらず、縦横比を保って縮小/拡大し、余白は黒で埋めて1920x1080に揃える。
+TX_VIDEO_WIDTH = 1920
+TX_VIDEO_HEIGHT = 1080
 _TX_VIDEO_SCALE_FILTER = (
     f"scale={TX_VIDEO_WIDTH}:{TX_VIDEO_HEIGHT}:force_original_aspect_ratio=decrease,"
     f"pad={TX_VIDEO_WIDTH}:{TX_VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1"
@@ -247,7 +247,7 @@ def _build_overlay_pipeline(
     # 台紙より大きい画像を単純に左上から切り取るだけなので、解像度が一致しないと右下の
     # 備考が画角外に出て見えなくなる。scale2refでオーバーレイ画像を実際の映像サイズへ
     # 常に合わせてから重ねる。
-    # 土台の映像は先にHD(1280x720)へ揃えてから重ねる。
+    # 土台の映像は先にフルHD(1920x1080)へ揃えてから重ねる。
     chain = (f"[0:v]{_TX_VIDEO_SCALE_FILTER}[hd];"
              f"[1:v][hd]scale2ref=w=iw:h=ih[ovl][base];[base][ovl]overlay=0:0,{date_filter}")
     if extra_video_filters:
@@ -818,7 +818,7 @@ class TxController(QtCore.QObject):
         self._preview_buffer.clear()
 
         if settings.use_color_bar_source or settings.video_source == "colorbar":
-            # Android版ColorBarSourceと同じ1920x1080固定画像を30fpsで反復する(送信はHDへ縮小)。
+            # Android版ColorBarSourceと同じ1920x1080固定画像を30fpsで反復する。
             video_args = [
                 "-re", "-loop", "1", "-framerate", "30",
                 "-i", str(ANDROID_TEST_PATTERN),
