@@ -77,22 +77,6 @@ class SettingsScreen(SettingsSubScreen):
                "Leave empty to disable the link.")
         ))
 
-        self.body_layout.addWidget(self._section_label(tr("映像オーバーレイ (コールサイン)", "Video Overlay (Callsign)")))
-        self.overlay_callsign_edit = QtWidgets.QLineEdit()
-        self.overlay_callsign_edit.setMinimumHeight(48)
-        self.overlay_callsign_edit.setPlaceholderText(tr("例: JA1XXX", "e.g. JA1XXX"))
-        self.overlay_callsign_edit.editingFinished.connect(self._save_overlay_callsign)
-        self.body_layout.addWidget(self.overlay_callsign_edit)
-        self.overlay_note_edit = QtWidgets.QLineEdit()
-        self.overlay_note_edit.setMinimumHeight(48)
-        self.overlay_note_edit.setPlaceholderText(tr("備考 (任意)", "Note (optional)"))
-        self.overlay_note_edit.editingFinished.connect(self._save_overlay_note)
-        self.body_layout.addWidget(self.overlay_note_edit)
-        self.body_layout.addWidget(self._note_label(
-            tr("カメラ映像に焼き込むコールサイン・備考です(テストパターン/ファイル選択には適用されません)。",
-               "Callsign and note burned into the camera video (not applied to the test pattern or a selected file).")
-        ))
-
         self.body_layout.addWidget(self._section_label(tr("オンデバイス復調", "On-device Demodulation")))
         self.on_device_checkbox = QtWidgets.QCheckBox(tr("オンデバイス復調 (GNU Radio)", "On-device demodulation (GNU Radio)"))
         self.on_device_checkbox.toggled.connect(self._on_on_device_toggled)
@@ -125,8 +109,6 @@ class SettingsScreen(SettingsSubScreen):
         self.body_layout.addWidget(self.set_datetime_btn)
         settings = self.main_window.settings
         self.ptt_controller_ip_edit.setText(settings.ptt_controller_host)
-        self.overlay_callsign_edit.setText(settings.overlay_callsign)
-        self.overlay_note_edit.setText(settings.overlay_note)
         self.on_device_checkbox.blockSignals(True)
         self.on_device_checkbox.setChecked(settings.use_on_device_demod)
         self.on_device_checkbox.blockSignals(False)
@@ -181,14 +163,6 @@ class SettingsScreen(SettingsSubScreen):
             error_dialog(self, tr("PTTコントローラ接続先エラー", "PTT Controller Destination Error"), str(exc))
             return
         self.main_window.settings.ptt_controller_host = host
-        self.main_window.save_settings()
-
-    def _save_overlay_callsign(self) -> None:
-        self.main_window.settings.overlay_callsign = self.overlay_callsign_edit.text().strip()
-        self.main_window.save_settings()
-
-    def _save_overlay_note(self) -> None:
-        self.main_window.settings.overlay_note = self.overlay_note_edit.text().strip()
         self.main_window.save_settings()
 
     def _on_on_device_toggled(self, checked: bool) -> None:
