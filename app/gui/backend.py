@@ -119,7 +119,7 @@ def _audio_input_args() -> list[str]:
 # 互いに相手の文字種のグリフを含まない)。drawtextフィルタは1回の呼び出しにつき
 # フォントを1つしか使えないため、コールサイン・備考はPillowで事前にPNGへ文字種ごとに
 # フォントを切り替えて合成し、ffmpegのoverlayフィルタで映像へ重ねる
-# (_render_overlay_image/_build_camera_overlay_pipeline参照)。日時は英数字のみなので
+# (_render_overlay_image/_build_overlay_pipeline参照)。日時は英数字のみなので
 # 従来通りdrawtextのライブ更新(%{localtime})を使う。
 _OVERLAY_FONT = platform_compat.overlay_ascii_font()
 _OVERLAY_SHADOW = "shadowcolor=black@0.8:shadowx=1:shadowy=1"
@@ -194,11 +194,13 @@ def _render_overlay_image(tmp_dir: str, callsign: str, note: str) -> str:
     return path
 
 
-def _build_camera_overlay_pipeline(
+def _build_overlay_pipeline(
         settings: AppSettings, extra_video_filters: str = "",
         *, split_preview: bool = False) -> tuple[list[str], list[str], str, str, int]:
-    """カメラ映像へのコールサイン・日時・備考オーバーレイを含む、ffmpeg入力・
-    フィルタ関連の引数一式を組み立てる。戻り値は
+    """映像(カメラまたは画像ファイル)へのコールサイン・日時・備考オーバーレイを
+    含む、ffmpeg入力・フィルタ関連の引数一式を組み立てる。"0:v"を土台として
+    重ねるだけなので、入力がカメラでも(-loopで反復する)静止画でも使える。
+    戻り値は
     (追加入力引数, フィルタ関連引数, 映像マップ先(-mapの値), プレビュー用映像マップ先,
     音声入力インデックス)。extra_video_filtersは末尾に追加するフィルタ(例: "showinfo")。
     カンマなしの単体フィルタ文字列を渡す。コールサイン・備考が両方空ならオーバーレイなし。
@@ -816,19 +818,20 @@ class TxController(QtCore.QObject):
         elif settings.video_source == "file" and settings.video_file_path:
             # ★選択できるのは静止画のみ(videosource.py参照)。colorbarと同じ
             # 「-loop 1 -framerate 30」で静止画を反復送信する(動画ファイル用の
-            # -stream_loopは静止画には効かない)。
+            # -stream_loopは静止画には効かない)。colorbarと違いこちらはユーザー
+            # 選択の任意画像なので、カメラと同じくコールサイン・備考オーバーレイを
+            # 適用できるようにする(_build_overlay_pipelineは"0:v"を土台に重ねる
+            # だけなので、カメラでも静止画でも同じ仕組みで動く)。
             video_args = [
                 "-re", "-loop", "1", "-framerate", "30",
                 "-i", settings.video_file_path,
             ]
-            overlay_input_args: list[str] = []
-            overlay_filter_args: list[str] = []
-            video_map = preview_video_map = "0:v"
-            audio_index = 1
+            overlay_input_args, overlay_filter_args, video_map, preview_video_map, audio_index = \
+                _build_overlay_pipeline(settings, split_preview=True)
         else:
             video_args = platform_compat.camera_input_args(settings.camera_device)
             overlay_input_args, overlay_filter_args, video_map, preview_video_map, audio_index = \
-                _build_camera_overlay_pipeline(settings, split_preview=True)
+                _build_overlay_pipeline(settings, split_preview=True)
 
         video_kbps = TX_VIDEO_BITRATE_BPS // 1000
         audio_kbps = TX_AUDIO_BITRATE_BPS // 1000
@@ -1049,7 +1052,7 @@ class TxController(QtCore.QObject):
             return
         udp_ts_url = _build_udp_ts_url(settings)
         overlay_input_args, overlay_filter_args, video_map, _preview_video_map, audio_index = \
-            _build_camera_overlay_pipeline(settings, extra_video_filters="showinfo")
+            _build_overlay_pipeline(settings, extra_video_filters="showinfo")
         args = platform_compat.camera_input_args(settings.camera_device) + overlay_input_args + \
             _audio_input_args() + overlay_filter_args + [
             "-map", video_map, "-map", f"{audio_index}:a",
