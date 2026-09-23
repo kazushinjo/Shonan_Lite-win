@@ -814,7 +814,13 @@ class TxController(QtCore.QObject):
             video_map = preview_video_map = "0:v"
             audio_index = 1
         elif settings.video_source == "file" and settings.video_file_path:
-            video_args = ["-re", "-stream_loop", "-1", "-i", settings.video_file_path]
+            # ★選択できるのは静止画のみ(videosource.py参照)。colorbarと同じ
+            # 「-loop 1 -framerate 30」で静止画を反復送信する(動画ファイル用の
+            # -stream_loopは静止画には効かない)。
+            video_args = [
+                "-re", "-loop", "1", "-framerate", "30",
+                "-i", settings.video_file_path,
+            ]
             overlay_input_args: list[str] = []
             overlay_filter_args: list[str] = []
             video_map = preview_video_map = "0:v"
