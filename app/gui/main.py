@@ -383,7 +383,7 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle(self._restart_display_title())
         dialog.setModal(True)
-        dialog.setFixedSize(500, 210)
+        dialog.setFixedSize(500, 240 if title in ("起動時Pluto再起動", "アプリ再起動") else 210)
         dialog.setStyleSheet(
             "QDialog { background: #101416; color: white; } "
             "QLabel { color: white; }")
@@ -398,7 +398,11 @@ class MainWindow(QtWidgets.QMainWindow):
         message.setAlignment(QtCore.Qt.AlignCenter)
         message.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(message)
-        if title == "起動時Pluto再起動":
+        if title in ("起動時Pluto再起動", "アプリ再起動"):
+            sub_message = QtWidgets.QLabel(tr("Plutoも再起動しています…", "Pluto is also restarting…"))
+            sub_message.setAlignment(QtCore.Qt.AlignCenter)
+            sub_message.setStyleSheet("font-size: 14px; color: #0c9bc0;")
+            layout.addWidget(sub_message)
             note = QtWidgets.QLabel(tr(
                 "Plutoの再起動に20秒以上かかる場合は確認をスキップしてホーム画面表示",
                 "If Pluto takes more than 20 seconds to restart, the check is skipped and the Home screen is shown"))
