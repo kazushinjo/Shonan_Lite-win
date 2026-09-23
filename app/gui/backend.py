@@ -188,7 +188,7 @@ def _draw_mixed_text(draw, x: int, y: int, text: str, font_size: int, align: str
 
 def _clamp_font_size(size) -> int:
     try:
-        return max(8, min(200, int(size)))
+        return max(8, min(256, int(size)))
     except (TypeError, ValueError):
         return 24
 
@@ -204,11 +204,9 @@ def _render_overlay_image(tmp_dir: str, callsign: str, note: str,
     if callsign:
         _draw_mixed_text(draw, 24, 24, callsign, _clamp_font_size(callsign_size), align="left")
     if note:
-        has_cjk = any(ord(ch) >= 0x3000 for ch in note)
-        text = f"備考: {note}" if has_cjk else f"NOTE: {note}"
         # 文字サイズに関わらず備考の下端を日時のすぐ上(従来の24px時と同じ位置)に揃える。
         size = _clamp_font_size(note_size)
-        _draw_mixed_text(draw, 1920 - 24, 1080 - 126 - size, text, size, align="right")
+        _draw_mixed_text(draw, 1920 - 24, 1080 - 126 - size, note, size, align="right")
     path = f"{tmp_dir}/{_OVERLAY_IMAGE_NAME}"
     img.save(path)
     return path
