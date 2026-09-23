@@ -13,7 +13,7 @@
 ; 揃えること。
 
 #define MyAppName "Shonan_Lite for Windows"
-#define MyAppVersion "1.1.2"
+#define MyAppVersion "1.1.3"
 #define MyAppPublisher "Kazuichi Shinjo"
 #define MyAppURL "https://github.com/kazushinjo/Shonan_Lite-win"
 #define MyAppExeName "ShonanLite.exe"
