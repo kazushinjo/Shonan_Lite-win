@@ -79,7 +79,7 @@ class VideoSourceScreen(SettingsSubScreen):
         columns.addWidget(right, 2)
 
         # 映像へ焼き込むコールサイン・備考(カメラ・画像ファイルに適用、テストパターンには
-        # 元々コールサインが描かれているため適用しない)。送信解像度はHD(1280x720)固定のため、
+        # 元々コールサインが描かれているため適用しない)。送信解像度はフルHD(1920x1080)固定のため、
         # 解像度・フレームレートの選択欄は置かない。
         overlay_row = QtWidgets.QHBoxLayout()
         overlay_row.setSpacing(10)
