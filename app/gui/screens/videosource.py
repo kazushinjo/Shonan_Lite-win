@@ -145,9 +145,9 @@ class VideoSourceScreen(SettingsSubScreen):
             settings.use_color_bar_source = False
         elif source == "file":
             path, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self, tr("映像ファイルを選択", "Select Video File"), "",
-                tr("映像ファイル (*.ts *.mp4 *.mkv *.mov *.avi);;すべてのファイル (*)",
-                   "Video files (*.ts *.mp4 *.mkv *.mov *.avi);;All files (*)"))
+                self, tr("画像ファイルを選択", "Select Image File"), "",
+                tr("画像ファイル (*.png *.jpg *.jpeg *.bmp)",
+                   "Image files (*.png *.jpg *.jpeg *.bmp)"))
             if not path:
                 file_button = self._source_buttons["file"]
                 file_button.blockSignals(True)
