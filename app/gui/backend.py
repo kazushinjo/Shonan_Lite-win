@@ -166,7 +166,19 @@ def _split_font_runs(text: str) -> list[tuple[str, bool]]:
     return runs
 
 
-def _draw_mixed_text(draw, x: int, y: int, text: str, font_size: int, align: str) -> None:
+def _parse_color(value) -> tuple[int, int, int]:
+    """"#RRGGBB"を(R, G, B)へ変換する。不正な値は白。"""
+    try:
+        text = str(value).lstrip("#")
+        if len(text) == 6:
+            return tuple(int(text[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        pass
+    return (255, 255, 255)
+
+
+def _draw_mixed_text(draw, x: int, y: int, text: str, font_size: int, align: str,
+                     color: tuple[int, int, int] = (255, 255, 255)) -> None:
     """英数字と日本語が混在するtextを、区間ごとにフォントを切り替えて描画する。"""
     from PIL import ImageFont
 
@@ -174,6 +186,9 @@ def _draw_mixed_text(draw, x: int, y: int, text: str, font_size: int, align: str
         False: ImageFont.truetype(_OVERLAY_ASCII_FONT_PATH, font_size),
         True: ImageFont.truetype(_OVERLAY_CJK_FONT_PATH, font_size),
     }
+    # 影は通常黒。黒など暗い文字色では影が見えないため白っぽい影にする。
+    luminance = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]
+    shadow = (0, 0, 0, 204) if luminance >= 80 else (255, 255, 255, 204)
     runs = _split_font_runs(text)
     if align == "right":
         total_width = sum(draw.textlength(t, font=fonts[c]) for t, c in runs)
@@ -181,8 +196,8 @@ def _draw_mixed_text(draw, x: int, y: int, text: str, font_size: int, align: str
     cursor = x
     for run_text, is_cjk in runs:
         font = fonts[is_cjk]
-        draw.text((cursor + 1, y + 1), run_text, font=font, fill=(0, 0, 0, 204))
-        draw.text((cursor, y), run_text, font=font, fill=(255, 255, 255, 255))
+        draw.text((cursor + 1, y + 1), run_text, font=font, fill=shadow)
+        draw.text((cursor, y), run_text, font=font, fill=(*color, 255))
         cursor += draw.textlength(run_text, font=font)
 
 
@@ -194,7 +209,8 @@ def _clamp_font_size(size) -> int:
 
 
 def _render_overlay_image(tmp_dir: str, callsign: str, note: str,
-                          callsign_size: int = 68, note_size: int = 24) -> str:
+                          callsign_size: int = 68, note_size: int = 24,
+                          callsign_color: str = "#FFFFFF") -> str:
     """コールサイン(左上・大)と備考(右下・小、日時のすぐ上)を透過PNGへ描画する。
     callsign_size/note_sizeは1920x1080上での文字サイズ(px)。"""
     from PIL import Image, ImageDraw
@@ -202,7 +218,8 @@ def _render_overlay_image(tmp_dir: str, callsign: str, note: str,
     img = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     if callsign:
-        _draw_mixed_text(draw, 24, 24, callsign, _clamp_font_size(callsign_size), align="left")
+        _draw_mixed_text(draw, 24, 24, callsign, _clamp_font_size(callsign_size), align="left",
+                         color=_parse_color(callsign_color))
     if note:
         # 文字サイズに関わらず備考の下端を日時のすぐ上(従来の24px時と同じ位置)に揃える。
         size = _clamp_font_size(note_size)
@@ -248,7 +265,8 @@ def _build_overlay_pipeline(
 
     image_path = _render_overlay_image(
         settings.tmp_dir, callsign, note,
-        settings.overlay_callsign_font_size, settings.overlay_note_font_size)
+        settings.overlay_callsign_font_size, settings.overlay_note_font_size,
+        settings.overlay_callsign_color)
     date_filter = (
         f"drawtext=fontfile={_ffmpeg_filter_path(_OVERLAY_FONT)}:text='%{{localtime\\:%Y-%m-%d %H.%M.%S}}':"
         f"fontsize=24:fontcolor=white:x=w-text_w-24:y=h-text_h-24:{_OVERLAY_SHADOW}"

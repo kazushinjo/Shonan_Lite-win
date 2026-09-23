@@ -12,6 +12,17 @@ from i18n import tr
 # オーバーレイ文字サイズの選択肢(px、1920x1080の送信映像上での大きさ)。
 _CALLSIGN_FONT_SIZES = (36, 48, 68, 96, 128, 192, 256)
 _NOTE_FONT_SIZES = (16, 24, 32, 48, 64)
+# コールサイン文字色の選択肢(表示名, "#RRGGBB")。
+_CALLSIGN_COLORS = (
+    (("白", "White"), "#FFFFFF"),
+    (("黄", "Yellow"), "#FFFF00"),
+    (("赤", "Red"), "#FF3030"),
+    (("緑", "Green"), "#00E000"),
+    (("青", "Blue"), "#3080FF"),
+    (("水色", "Cyan"), "#00FFFF"),
+    (("橙", "Orange"), "#FF9900"),
+    (("黒", "Black"), "#000000"),
+)
 
 
 class VideoSourceScreen(SettingsSubScreen):
@@ -97,6 +108,9 @@ class VideoSourceScreen(SettingsSubScreen):
         self.overlay_callsign_size = self._font_size_combo(_CALLSIGN_FONT_SIZES)
         self.overlay_callsign_size.activated.connect(self._save_overlay_callsign_size)
         overlay_row.addWidget(self.overlay_callsign_size)
+        self.overlay_callsign_color = self._color_combo()
+        self.overlay_callsign_color.activated.connect(self._save_overlay_callsign_color)
+        overlay_row.addWidget(self.overlay_callsign_color)
         overlay_row.addWidget(QtWidgets.QLabel(tr("備考", "Note")))
         self.overlay_note_edit = QtWidgets.QLineEdit()
         self.overlay_note_edit.setMinimumHeight(48)
@@ -185,6 +199,36 @@ class VideoSourceScreen(SettingsSubScreen):
         settings = self.main_window.settings
         self._select_font_size(self.overlay_callsign_size, settings.overlay_callsign_font_size)
         self._select_font_size(self.overlay_note_size, settings.overlay_note_font_size)
+        color = settings.overlay_callsign_color.upper()
+        index = self.overlay_callsign_color.findData(color)
+        if index < 0:
+            # 設定ファイルに選択肢外の色がある場合もその色を表示・維持する。
+            self.overlay_callsign_color.addItem(self._color_icon(color), color, color)
+            index = self.overlay_callsign_color.count() - 1
+        self.overlay_callsign_color.setCurrentIndex(index)
+
+    @staticmethod
+    def _color_icon(color: str) -> QtGui.QIcon:
+        pixmap = QtGui.QPixmap(28, 28)
+        pixmap.fill(QtGui.QColor(color))
+        painter = QtGui.QPainter(pixmap)
+        painter.setPen(QtGui.QColor("#888888"))
+        painter.drawRect(0, 0, 27, 27)
+        painter.end()
+        return QtGui.QIcon(pixmap)
+
+    def _color_combo(self) -> QtWidgets.QComboBox:
+        combo = QtWidgets.QComboBox()
+        combo.setMinimumHeight(48)
+        combo.setIconSize(QtCore.QSize(28, 28))
+        combo.setToolTip(tr("コールサインの文字色", "Callsign color"))
+        for (ja, en), color in _CALLSIGN_COLORS:
+            combo.addItem(self._color_icon(color), tr(ja, en), color)
+        return combo
+
+    def _save_overlay_callsign_color(self, _index: int) -> None:
+        self.main_window.settings.overlay_callsign_color = str(self.overlay_callsign_color.currentData())
+        self.main_window.save_settings()
 
     def _save_overlay_callsign_size(self, _index: int) -> None:
         self.main_window.settings.overlay_callsign_font_size = int(self.overlay_callsign_size.currentData())
