@@ -10,7 +10,7 @@ from widgets import SettingsSubScreen
 from i18n import tr
 
 # オーバーレイ文字サイズの選択肢(px、1920x1080の送信映像上での大きさ)。
-_CALLSIGN_FONT_SIZES = (36, 48, 68, 96, 128)
+_CALLSIGN_FONT_SIZES = (36, 48, 68, 96, 128, 192, 256)
 _NOTE_FONT_SIZES = (16, 24, 32, 48, 64)
 
 
