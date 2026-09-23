@@ -17,7 +17,7 @@ app/gui/manual_content.py(Pi5実機版)を土台に、Windows版(v1.1.1)の実�
   - Raspberry Pi起動メニュー・systemdサービス・Langstone切替は存在しない。
 """
 
-MANUAL_VERSION = "1.1.4"
+MANUAL_VERSION = "1.1.5"
 MANUAL_DATE = "2026-09-21"
 
 # 章タイトル → docs/images内のスクリーンショット(リストも可)。
