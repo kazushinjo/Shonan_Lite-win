@@ -9,6 +9,10 @@ import platform_compat
 from widgets import SettingsSubScreen
 from i18n import tr
 
+# オーバーレイ文字サイズの選択肢(px、1920x1080の送信映像上での大きさ)。
+_CALLSIGN_FONT_SIZES = (36, 48, 68, 96, 128)
+_NOTE_FONT_SIZES = (16, 24, 32, 48, 64)
+
 
 class VideoSourceScreen(SettingsSubScreen):
     def __init__(self, main_window):
@@ -90,6 +94,9 @@ class VideoSourceScreen(SettingsSubScreen):
         self.overlay_callsign_edit.setText(settings.overlay_callsign)
         self.overlay_callsign_edit.editingFinished.connect(self._save_overlay_callsign)
         overlay_row.addWidget(self.overlay_callsign_edit, 1)
+        self.overlay_callsign_size = self._font_size_combo(_CALLSIGN_FONT_SIZES)
+        self.overlay_callsign_size.activated.connect(self._save_overlay_callsign_size)
+        overlay_row.addWidget(self.overlay_callsign_size)
         overlay_row.addWidget(QtWidgets.QLabel(tr("備考", "Note")))
         self.overlay_note_edit = QtWidgets.QLineEdit()
         self.overlay_note_edit.setMinimumHeight(48)
@@ -97,6 +104,10 @@ class VideoSourceScreen(SettingsSubScreen):
         self.overlay_note_edit.setText(settings.overlay_note)
         self.overlay_note_edit.editingFinished.connect(self._save_overlay_note)
         overlay_row.addWidget(self.overlay_note_edit, 2)
+        self.overlay_note_size = self._font_size_combo(_NOTE_FONT_SIZES)
+        self.overlay_note_size.activated.connect(self._save_overlay_note_size)
+        overlay_row.addWidget(self.overlay_note_size)
+        self._load_overlay_sizes()
         outer.addLayout(overlay_row)
 
         self._camera_device = cameras[0]
@@ -124,6 +135,7 @@ class VideoSourceScreen(SettingsSubScreen):
         settings = self.main_window.settings
         self.overlay_callsign_edit.setText(settings.overlay_callsign)
         self.overlay_note_edit.setText(settings.overlay_note)
+        self._load_overlay_sizes()
         # レイアウト確定後の実サイズでプレビュー枠へ描画する。
         self._update_preview()
 
@@ -150,6 +162,37 @@ class VideoSourceScreen(SettingsSubScreen):
         self._group.addButton(radio)
         self._source_buttons[source] = radio
         layout.addWidget(radio)
+
+    @staticmethod
+    def _font_size_combo(sizes) -> QtWidgets.QComboBox:
+        combo = QtWidgets.QComboBox()
+        combo.setMinimumHeight(48)
+        combo.setToolTip(tr("文字サイズ", "Font size"))
+        for size in sizes:
+            combo.addItem(f"{size}px", size)
+        return combo
+
+    @staticmethod
+    def _select_font_size(combo: QtWidgets.QComboBox, size: int) -> None:
+        index = combo.findData(size)
+        if index < 0:
+            # 設定ファイルに選択肢外の値がある場合もその値を表示・維持する。
+            combo.addItem(f"{size}px", size)
+            index = combo.count() - 1
+        combo.setCurrentIndex(index)
+
+    def _load_overlay_sizes(self) -> None:
+        settings = self.main_window.settings
+        self._select_font_size(self.overlay_callsign_size, settings.overlay_callsign_font_size)
+        self._select_font_size(self.overlay_note_size, settings.overlay_note_font_size)
+
+    def _save_overlay_callsign_size(self, _index: int) -> None:
+        self.main_window.settings.overlay_callsign_font_size = int(self.overlay_callsign_size.currentData())
+        self.main_window.save_settings()
+
+    def _save_overlay_note_size(self, _index: int) -> None:
+        self.main_window.settings.overlay_note_font_size = int(self.overlay_note_size.currentData())
+        self.main_window.save_settings()
 
     def _save_overlay_callsign(self) -> None:
         self.main_window.settings.overlay_callsign = self.overlay_callsign_edit.text().strip()
