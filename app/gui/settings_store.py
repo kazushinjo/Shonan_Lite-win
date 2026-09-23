@@ -158,6 +158,8 @@ class AppSettings:
     # 文字サイズ(px、1920x1080の送信映像上での大きさ)。映像ソース画面で選択する。
     overlay_callsign_font_size: int = 68
     overlay_note_font_size: int = 24
+    # コールサインの文字色("#RRGGBB")。映像ソース画面で選択する。
+    overlay_callsign_color: str = "#FFFFFF"
 
     # RXゲイン
     rx_agc_enabled: bool = False
