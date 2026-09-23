@@ -186,18 +186,29 @@ def _draw_mixed_text(draw, x: int, y: int, text: str, font_size: int, align: str
         cursor += draw.textlength(run_text, font=font)
 
 
-def _render_overlay_image(tmp_dir: str, callsign: str, note: str) -> str:
-    """コールサイン(左上・大)と備考(右下・小、日時のすぐ上)を透過PNGへ描画する。"""
+def _clamp_font_size(size) -> int:
+    try:
+        return max(8, min(200, int(size)))
+    except (TypeError, ValueError):
+        return 24
+
+
+def _render_overlay_image(tmp_dir: str, callsign: str, note: str,
+                          callsign_size: int = 68, note_size: int = 24) -> str:
+    """コールサイン(左上・大)と備考(右下・小、日時のすぐ上)を透過PNGへ描画する。
+    callsign_size/note_sizeは1920x1080上での文字サイズ(px)。"""
     from PIL import Image, ImageDraw
 
     img = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     if callsign:
-        _draw_mixed_text(draw, 24, 24, callsign, 68, align="left")
+        _draw_mixed_text(draw, 24, 24, callsign, _clamp_font_size(callsign_size), align="left")
     if note:
         has_cjk = any(ord(ch) >= 0x3000 for ch in note)
         text = f"備考: {note}" if has_cjk else f"NOTE: {note}"
-        _draw_mixed_text(draw, 1920 - 24, 1080 - 150, text, 24, align="right")
+        # 文字サイズに関わらず備考の下端を日時のすぐ上(従来の24px時と同じ位置)に揃える。
+        size = _clamp_font_size(note_size)
+        _draw_mixed_text(draw, 1920 - 24, 1080 - 126 - size, text, size, align="right")
     path = f"{tmp_dir}/{_OVERLAY_IMAGE_NAME}"
     img.save(path)
     return path
@@ -237,7 +248,9 @@ def _build_overlay_pipeline(
             video_filter += f",{extra_video_filters}"
         return [], ["-vf", video_filter], "0:v", "0:v", 1
 
-    image_path = _render_overlay_image(settings.tmp_dir, callsign, note)
+    image_path = _render_overlay_image(
+        settings.tmp_dir, callsign, note,
+        settings.overlay_callsign_font_size, settings.overlay_note_font_size)
     date_filter = (
         f"drawtext=fontfile={_ffmpeg_filter_path(_OVERLAY_FONT)}:text='%{{localtime\\:%Y-%m-%d %H.%M.%S}}':"
         f"fontsize=24:fontcolor=white:x=w-text_w-24:y=h-text_h-24:{_OVERLAY_SHADOW}"

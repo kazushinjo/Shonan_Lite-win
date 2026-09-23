@@ -155,6 +155,9 @@ class AppSettings:
     # 焼き込まない(カラーバー画像自体に既にコールサインが描かれているため)。
     overlay_callsign: str = ""
     overlay_note: str = ""
+    # 文字サイズ(px、1920x1080の送信映像上での大きさ)。映像ソース画面で選択する。
+    overlay_callsign_font_size: int = 68
+    overlay_note_font_size: int = 24
 
     # RXゲイン
     rx_agc_enabled: bool = False

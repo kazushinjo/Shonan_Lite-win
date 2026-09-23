@@ -16,6 +16,7 @@ _PRESET_FIELDS = (
     "rx_gain_db", "rx_agc_enabled", "tx_power_db", "video_source",
     "video_file_path", "use_color_bar_source", "audio_enabled",
     "camera_device", "overlay_callsign", "overlay_note",
+    "overlay_callsign_font_size", "overlay_note_font_size",
     "use_on_device_demod", "simultaneous_tx_rx_test",
     "rf_loopback_enabled", "loopback_use_localhost", "loopback_target_ip",
 )
