@@ -1,0 +1,34 @@
+#!/bin/bash
+cd $HOME
+cp $HOME/Langstone/Langstone_Pluto.conf /tmp
+cp $HOME/Langstone/Langstone_Hack.conf /tmp
+if (grep -q Pluto $HOME/Langstone/run); then
+  echo "Saving Pluto"  
+  PLUTO=1
+else
+  echo "Saving HackRF"
+  PLUTO=0
+fi
+rm -rf $HOME/Langstone
+git clone http://www.github.com/g4eml/Langstone-V3
+mv Langstone-V3 Langstone
+cp /tmp/Langstone_Pluto.conf $HOME/Langstone
+cp /tmp/Langstone_Hack.conf $HOME/Langstone
+chmod +x $HOME/Langstone/build
+chmod +x $HOME/Langstone/run
+chmod +x $HOME/Langstone/stop
+chmod +x $HOME/Langstone/update
+chmod +x $HOME/Langstone/set_pluto
+chmod +x $HOME/Langstone/set_sound
+$HOME/Langstone/build
+if [ $PLUTO -eq 1 ]; then
+ echo "Restore Pluto"
+ sudo cp $HOME/Langstone/run_pluto $HOME/Langstone/run
+ sudo cp $HOME/Langstone/stop_pluto $HOME/Langstone/stop
+else
+ echo "Restoring HackRF"
+ sudo cp $HOME/Langstone/run_hack $HOME/Langstone/run
+ sudo cp $HOME/Langstone/stop_hack $HOME/Langstone/stop
+fi
+
+
