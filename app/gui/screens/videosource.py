@@ -25,6 +25,8 @@ class VideoSourceScreen(SettingsSubScreen):
             "QLabel { color: #eeeeee; background: transparent; font-size: 28px; }"
             "QComboBox { background: #191d1f; color: #eeeeee; border: 1px solid #46545b;"
             " border-radius: 6px; padding: 5px; font-size: 28px; }"
+            "QLineEdit { background: #191d1f; color: #eeeeee; border: 1px solid #46545b;"
+            " border-radius: 6px; padding: 4px 8px; font-size: 28px; }"
         )
         self.body_layout.addWidget(card, 1)
         outer = QtWidgets.QVBoxLayout(card)
@@ -76,19 +78,26 @@ class VideoSourceScreen(SettingsSubScreen):
         right_layout.addWidget(self.preview, 1)
         columns.addWidget(right, 2)
 
-        settings_row = QtWidgets.QHBoxLayout()
-        settings_row.setSpacing(10)
-        settings_row.addWidget(QtWidgets.QLabel(tr("解像度", "Resolution")))
-        self.resolution = QtWidgets.QComboBox()
-        self.resolution.addItems(("1920x1080", "1280x720", "640x480"))
-        self.resolution.setCurrentText("1920x1080")
-        settings_row.addWidget(self.resolution, 1)
-        settings_row.addWidget(QtWidgets.QLabel(tr("フレームレート", "Frame rate")))
-        self.framerate = QtWidgets.QComboBox()
-        self.framerate.addItems(("30 fps", "25 fps", "15 fps"))
-        self.framerate.setCurrentText("30 fps")
-        settings_row.addWidget(self.framerate, 1)
-        outer.addLayout(settings_row)
+        # 映像へ焼き込むコールサイン・備考(カメラ・画像ファイルに適用、テストパターンには
+        # 元々コールサインが描かれているため適用しない)。送信解像度はHD(1280x720)固定のため、
+        # 解像度・フレームレートの選択欄は置かない。
+        overlay_row = QtWidgets.QHBoxLayout()
+        overlay_row.setSpacing(10)
+        overlay_row.addWidget(QtWidgets.QLabel(tr("コールサイン", "Callsign")))
+        self.overlay_callsign_edit = QtWidgets.QLineEdit()
+        self.overlay_callsign_edit.setMinimumHeight(48)
+        self.overlay_callsign_edit.setPlaceholderText(tr("例: JA1XXX", "e.g. JA1XXX"))
+        self.overlay_callsign_edit.setText(settings.overlay_callsign)
+        self.overlay_callsign_edit.editingFinished.connect(self._save_overlay_callsign)
+        overlay_row.addWidget(self.overlay_callsign_edit, 1)
+        overlay_row.addWidget(QtWidgets.QLabel(tr("備考", "Note")))
+        self.overlay_note_edit = QtWidgets.QLineEdit()
+        self.overlay_note_edit.setMinimumHeight(48)
+        self.overlay_note_edit.setPlaceholderText(tr("任意", "Optional"))
+        self.overlay_note_edit.setText(settings.overlay_note)
+        self.overlay_note_edit.editingFinished.connect(self._save_overlay_note)
+        overlay_row.addWidget(self.overlay_note_edit, 2)
+        outer.addLayout(overlay_row)
 
         self._camera_device = cameras[0]
         # ★settings.camera_device(TX開始時にbackend.pyが実際に使う値)へも書き戻す。
@@ -111,6 +120,10 @@ class VideoSourceScreen(SettingsSubScreen):
         self.preview.setText(tr("カメラ (USB)\nプレビュー待機中", "Camera (USB)\nWaiting for preview"))
 
     def on_show(self) -> None:
+        # プリセット読込等で設定が変わっている場合に備え、表示のたびに入力欄を読み直す。
+        settings = self.main_window.settings
+        self.overlay_callsign_edit.setText(settings.overlay_callsign)
+        self.overlay_note_edit.setText(settings.overlay_note)
         # レイアウト確定後の実サイズでプレビュー枠へ描画する。
         self._update_preview()
 
@@ -137,6 +150,14 @@ class VideoSourceScreen(SettingsSubScreen):
         self._group.addButton(radio)
         self._source_buttons[source] = radio
         layout.addWidget(radio)
+
+    def _save_overlay_callsign(self) -> None:
+        self.main_window.settings.overlay_callsign = self.overlay_callsign_edit.text().strip()
+        self.main_window.save_settings()
+
+    def _save_overlay_note(self) -> None:
+        self.main_window.settings.overlay_note = self.overlay_note_edit.text().strip()
+        self.main_window.save_settings()
 
     def _select(self, source: str) -> None:
         settings = self.main_window.settings

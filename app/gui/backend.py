@@ -139,6 +139,15 @@ def _ffmpeg_filter_path(path: str) -> str:
     return f"'{escaped}'"
 _OVERLAY_IMAGE_NAME = "shonan_overlay.png"
 
+# 送信映像の解像度はHD(1280x720)固定。カメラの実キャプチャ解像度や画像ファイルの
+# 寸法・縦横比に関わらず、縦横比を保って縮小/拡大し、余白は黒で埋めて1280x720に揃える。
+TX_VIDEO_WIDTH = 1280
+TX_VIDEO_HEIGHT = 720
+_TX_VIDEO_SCALE_FILTER = (
+    f"scale={TX_VIDEO_WIDTH}:{TX_VIDEO_HEIGHT}:force_original_aspect_ratio=decrease,"
+    f"pad={TX_VIDEO_WIDTH}:{TX_VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+)
+
 
 def _split_font_runs(text: str) -> list[tuple[str, bool]]:
     """textを(区間文字列, 日本語グリフが必要か)のリストへ分割する。"""
@@ -221,9 +230,12 @@ def _build_overlay_pipeline(
     callsign = settings.overlay_callsign.strip()
     note = settings.overlay_note.strip()
     if not callsign and not note:
+        # ★-vfは直後の最初の出力(mpegts本線)にだけ掛かる。プレビュー分岐は"0:v"を
+        # 直接-mapし、別途-s 640x360へ縮小するので問題ない。
+        video_filter = _TX_VIDEO_SCALE_FILTER
         if extra_video_filters:
-            return [], ["-vf", extra_video_filters], "0:v", "0:v", 1
-        return [], [], "0:v", "0:v", 1
+            video_filter += f",{extra_video_filters}"
+        return [], ["-vf", video_filter], "0:v", "0:v", 1
 
     image_path = _render_overlay_image(settings.tmp_dir, callsign, note)
     date_filter = (
@@ -235,7 +247,9 @@ def _build_overlay_pipeline(
     # 台紙より大きい画像を単純に左上から切り取るだけなので、解像度が一致しないと右下の
     # 備考が画角外に出て見えなくなる。scale2refでオーバーレイ画像を実際の映像サイズへ
     # 常に合わせてから重ねる。
-    chain = f"[1:v][0:v]scale2ref=w=iw:h=ih[ovl][base];[base][ovl]overlay=0:0,{date_filter}"
+    # 土台の映像は先にHD(1280x720)へ揃えてから重ねる。
+    chain = (f"[0:v]{_TX_VIDEO_SCALE_FILTER}[hd];"
+             f"[1:v][hd]scale2ref=w=iw:h=ih[ovl][base];[base][ovl]overlay=0:0,{date_filter}")
     if extra_video_filters:
         chain += f",{extra_video_filters}"
     if split_preview:
@@ -804,7 +818,7 @@ class TxController(QtCore.QObject):
         self._preview_buffer.clear()
 
         if settings.use_color_bar_source or settings.video_source == "colorbar":
-            # Android版ColorBarSourceと同じ1920x1080固定画像を30fpsで反復する。
+            # Android版ColorBarSourceと同じ1920x1080固定画像を30fpsで反復する(送信はHDへ縮小)。
             video_args = [
                 "-re", "-loop", "1", "-framerate", "30",
                 "-i", str(ANDROID_TEST_PATTERN),
@@ -812,7 +826,7 @@ class TxController(QtCore.QObject):
             # ★カラーバー画像自体に既にコールサインが描かれているため焼き込まない
             # (shonan_lite-ipad版VideoSourceSettingsViewと同じ扱い)。
             overlay_input_args: list[str] = []
-            overlay_filter_args: list[str] = []
+            overlay_filter_args: list[str] = ["-vf", _TX_VIDEO_SCALE_FILTER]
             video_map = preview_video_map = "0:v"
             audio_index = 1
         elif settings.video_source == "file" and settings.video_file_path:
