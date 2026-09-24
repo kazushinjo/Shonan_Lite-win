@@ -1,0 +1,5 @@
+cc $HOME/Langstone/LangstoneGUI_Pluto.c -o $HOME/Langstone/GUI_Pluto -liio -llgpio 
+cc $HOME/Langstone/LangstoneGUI_Hack.c -o $HOME/Langstone/GUI_Hack -llgpio 
+cc $HOME/Langstone/HW_Test.c -o $HOME/Langstone/HW_Test -llgpio
+cc $HOME/Langstone/Pluto_Test.c -o $HOME/Langstone/Pluto_Test -liio
+cc $HOME/Langstone/Screen_Message.c -o $HOME/Langstone/Screen_Message
