@@ -1,0 +1,2 @@
+# パッチファイルは改行をLFのままにする(CRLFに変換されるとgit applyが失敗するため)
+*.patch text eol=lf

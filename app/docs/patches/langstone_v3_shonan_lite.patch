@@ -1,0 +1,1092 @@
+diff -ruN a/Font.h b/Font.h
+--- a/Font.h	2026-08-15 18:08:52
++++ b/Font.h	2026-08-15 18:08:52
+@@ -50,19 +50,23 @@
+     0x00, 0x08, 0x08, 0x08, 0x7F, 0x08, 0x08, 0x08, 0x00,   // 43     +
+     0x80, 0x00, 0x00, 0x00, 0x00, 0x30, 0x10, 0x10, 0x20,   // 44     ,
+     0x00, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x00, 0x00,   // 45     -
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,   // 46     .
++    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x30,   // 46     . (Shonan_Lite-pi5統合版パッチ: 周波数表示用ローマン体化)
+     0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x00,   // 47     /
+ 
+-    0x3e, 0x41, 0x43, 0x45, 0x49, 0x51, 0x61, 0x41, 0x3e,   // 48     0
+-    0x08, 0x18, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x3e,   // 49     1
+-    0x3e, 0x41, 0x01, 0x02, 0x0c, 0x10, 0x20, 0x40, 0x7f,   // 50     2
+-    0x3e, 0x41, 0x01, 0x01, 0x1e, 0x01, 0x01, 0x41, 0x3e,   // 51     3
+-    0x02, 0x06, 0x0a, 0x12, 0x22, 0x7f, 0x02, 0x02, 0x02,   // 52     4
+-    0x7f, 0x40, 0x40, 0x40, 0x7e, 0x01, 0x01, 0x41, 0x3e,   // 53     5
+-    0x3e, 0x41, 0x40, 0x40, 0x7e, 0x41, 0x41, 0x41, 0x3e,   // 54     6
+-    0x7f, 0x41, 0x02, 0x04, 0x08, 0x10, 0x10, 0x10, 0x10,   // 55     7
+-    0x3e, 0x41, 0x41, 0x41, 0x3e, 0x41, 0x41, 0x41, 0x3e,   // 56     8
+-    0x3f, 0x41, 0x41, 0x41, 0x3f, 0x01, 0x01, 0x41, 0x3e,   // 57     9
++    // ★Shonan_Lite-pi5統合版パッチ: 大きな周波数表示(displayFreq、textSize=6)が
++    // 使う0-9のグリフをセリフ(ローマン体)風のビットマップに差し替え。サイズ
++    // (8x9ピクセルグリッド、textSizeスケール)は変更していない。数字・記号
++    // 以外のグリフは元のまま。
++    0x7e, 0x81, 0x83, 0x85, 0x89, 0x91, 0xc1, 0x81, 0x7e,   // 48     0
++    0x18, 0x38, 0x58, 0x18, 0x18, 0x18, 0x18, 0x18, 0x7e,   // 49     1
++    0x7c, 0x82, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0xfe,   // 50     2
++    0x7c, 0x82, 0x02, 0x1c, 0x02, 0x02, 0x82, 0x7c, 0x18,   // 51     3
++    0x0c, 0x1c, 0x2c, 0x4c, 0x8c, 0xfe, 0x0c, 0x0c, 0x1e,   // 52     4
++    0x7e, 0x80, 0x80, 0xfc, 0x06, 0x02, 0x82, 0x7c, 0x18,   // 53     5
++    0x3c, 0x40, 0x80, 0xbc, 0xc2, 0x82, 0x82, 0x44, 0x38,   // 54     6
++    0x7e, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x40, 0xe0,   // 55     7
++    0x7c, 0x82, 0x82, 0x7c, 0x82, 0x82, 0x82, 0x7c, 0x18,   // 56     8
++    0x7c, 0x82, 0x82, 0x82, 0x7e, 0x02, 0x02, 0x02, 0x38,   // 57     9
+     0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00,   // 58     :
+     0x20, 0x00, 0x00, 0x00, 0x00, 0x30, 0x10, 0x10, 0x20,   // 59     ;
+     0x04, 0x08, 0x10, 0x20, 0x40, 0x20, 0x10, 0x08, 0x04,   // 60     <
+diff -ruN a/Graphics.h b/Graphics.h
+--- a/Graphics.h	2026-09-04 02:45:28.037026600 +0900
++++ b/Graphics.h	2026-09-04 02:45:28.071304800 +0900
+@@ -3,12 +3,33 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <fcntl.h>
++#include <math.h>
+ #include <linux/fb.h>
+ #include <sys/mman.h>
+ #include <sys/ioctl.h>
+ 
+ #include "Font.h"
+ 
++// ★Shonan_Lite-pi5統合版パッチ: ボタン(displayButton系)と大きな周波数表示を
++// FreeType+TTF(Liberation Sans Bold)でアンチエイリアス描画するための状態。
++// ttFontReady==0の間は従来のドットフォント/直角ボタン枠にフォールバックする
++// (フォントファイルが実機に無い等の場合でもアプリを壊さないため)。
++#include <ft2build.h>
++#include FT_FREETYPE_H
++
++FT_Library ttLibrary;
++FT_Face ttFace;
++int ttFontReady = 0;
++// ★Shonan_Lite-pi5統合版パッチ: ボタン文字は太字だと圧迫感があるとのことで、
++// 周波数表示(ttFace、Bold)とは別にレギュラーウェイトのフェイスを用意した。
++FT_Face ttFaceButton;
++int ttFontButtonReady = 0;
++
++void initTTFont(void);
++static int measureTextTTFFace(FT_Face face, const char *s);
++static void drawTextTTFFace(FT_Face face, const char *s, int x, int baselineY, int R, int G, int B);
++static void drawRoundedButtonBorder(int x, int y, int w, int h, int radius, int R, int G, int B);
++
+ char *fbp = 0;
+ int fbfd = 0;
+ long int screenSize = 0;
+@@ -55,12 +76,64 @@
+  while(s[p]!=0);
+ }
+ 
++// ★Shonan_Lite-pi5統合版パッチ: 画面全体の文字を周波数表示・ボタンと同じ
++// TTFフォント(ttFaceButton、レギュラーウェイト)で統一するため、ドット
++// フォント(font[][])の代わりにここでアンチエイリアス描画する。既存コードは
++// 「1文字が8*textSize x 9*textSize の固定セルを占め、currentXが8*textSize
++// ずつ進む」という等幅前提(空白埋めでの消去、複数displayStr呼び出しでの
++// 位置合わせ等)に多数依存しているため、そのセル寸法・前進幅は変えず、
++// セル内でグリフを中央寄せ描画するだけに留めている。ttFontButtonReady==0
++// (フォント読込失敗)時は元のドットフォント描画にフォールバックする。
+ void displayChar(int ch)
+ {
+   int row;
+   int col;
+   int pix;
+   int descender;
++  int cellW = 8*textSize;
++  int cellH = 9*textSize;
++
++  if (ttFontButtonReady)
++    {
++      int xx, yy;
++      // ★セル高(cellH)ちょうどしかクリアしないと、TTFグリフ(セルより大きい
++      // pixel_sizeで描画するため)の上端・下端がセルからはみ出し、次に別の
++      // 文字へ変わった際そのはみ出し部分だけ消えずに残ることがある
++      // (周波数表示のFreeType化で見つかったのと同じ不具合、実機で確認)。
++      // 上下に余裕を持ってクリアする。
++      int clearMarginY = cellH*3/10;
++      for (yy=-clearMarginY; yy<cellH+clearMarginY; yy++)
++        {
++          for (xx=0; xx<cellW; xx++)
++            {
++              setPixel(currentX+xx, currentY+yy, backColourR, backColourG, backColourB);
++            }
++        }
++      if (ch != ' ')
++        {
++          FT_Set_Pixel_Sizes(ttFaceButton, 0, (cellH*8)/7);
++          if (FT_Load_Char(ttFaceButton, (FT_ULong)ch, FT_LOAD_RENDER) == 0)
++            {
++              FT_GlyphSlot g = ttFaceButton->glyph;
++              int originX = currentX + (cellW - (int)g->bitmap.width)/2;
++              int baselineY = currentY + (cellH*4)/5;
++              for (row=0; row<(int)g->bitmap.rows; row++)
++                {
++                  for (col=0; col<(int)g->bitmap.width; col++)
++                    {
++                      unsigned char cov = g->bitmap.buffer[row*g->bitmap.pitch+col];
++                      if (cov==0) continue;
++                      int blR = backColourR + ((foreColourR-backColourR)*cov)/255;
++                      int blG = backColourG + ((foreColourG-backColourG)*cov)/255;
++                      int blB = backColourB + ((foreColourB-backColourB)*cov)/255;
++                      setPixel(originX+col, baselineY - g->bitmap_top + row, blR, blG, blB);
++                    }
++                }
++            }
++        }
++      currentX = currentX + cellW;
++      return;
++    }
+ 
+   if(font[ch][0] & 0x80)
+   {
+@@ -82,7 +155,7 @@
+             setLargePixel(currentX+col*textSize,currentY+row*textSize+descender,textSize,foreColourR,foreColourG,foreColourB);
+          }
+        else
+-         { 
++         {
+             setLargePixel(currentX+col*textSize,currentY+row*textSize+descender,textSize,backColourR,backColourG,backColourB);
+          }
+       }
+@@ -104,27 +177,142 @@
+ 
+ }
+ 
++// ★Shonan_Lite-pi5統合版パッチ: ボタン文字・大きな周波数表示で共用するTTF
++// フォント(Liberation Sans Bold、apt版fonts-liberation2同梱)を読み込む。
++void initTTFont(void)
++{
++  const char *boldCandidates[] = {
++    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
++    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
++    NULL
++  };
++  // ★ボタン文字は太字だと圧迫感があるとのことでレギュラーウェイトを使う。
++  const char *regularCandidates[] = {
++    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
++    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
++    NULL
++  };
++  int i;
++
++  if (FT_Init_FreeType(&ttLibrary))
++    {
++      printf("initTTFont: FT_Init_FreeType failed, using dot-matrix font/square buttons\n");
++      return;
++    }
++  for (i = 0; boldCandidates[i] != NULL; i++)
++    {
++      if (FT_New_Face(ttLibrary, boldCandidates[i], 0, &ttFace) == 0)
++        {
++          ttFontReady = 1;
++          printf("initTTFont: loaded %s\n", boldCandidates[i]);
++          break;
++        }
++    }
++  for (i = 0; regularCandidates[i] != NULL; i++)
++    {
++      if (FT_New_Face(ttLibrary, regularCandidates[i], 0, &ttFaceButton) == 0)
++        {
++          ttFontButtonReady = 1;
++          printf("initTTFont: loaded %s\n", regularCandidates[i]);
++          break;
++        }
++    }
++  if (!ttFontReady && !ttFontButtonReady)
++    {
++      printf("initTTFont: no TTF font found, using dot-matrix font/square buttons\n");
++    }
++}
++
++// 現在のFT_Set_Pixel_Sizesで指定中のサイズでの文字列描画幅(px)を測る。
++static int measureTextTTFFace(FT_Face face, const char *s)
++{
++  int width = 0;
++  int i;
++  for (i = 0; s[i] != 0; i++)
++    {
++      if (FT_Load_Char(face, (FT_ULong)s[i], FT_LOAD_DEFAULT)) continue;
++      width += (face->glyph->advance.x >> 6);
++    }
++  return width;
++}
++
++// (x,baselineY)を起点に文字列をアンチエイリアス描画する。backColourR/G/Bと
++// のブレンドでカバレッジ(0-255)を滑らかにする(displayFreqTTFのグリフ描画と
++// 同じ考え方)。
++static void drawTextTTFFace(FT_Face face, const char *s, int x, int baselineY, int R, int G, int B)
++{
++  int penX = x;
++  int i, row, col;
++  for (i = 0; s[i] != 0; i++)
++    {
++      if (FT_Load_Char(face, (FT_ULong)s[i], FT_LOAD_RENDER)) continue;
++      FT_GlyphSlot g = face->glyph;
++      for (row = 0; row < (int)g->bitmap.rows; row++)
++        {
++          for (col = 0; col < (int)g->bitmap.width; col++)
++            {
++              unsigned char cov = g->bitmap.buffer[row * g->bitmap.pitch + col];
++              if (cov == 0) continue;
++              int blR = backColourR + ((R - backColourR) * cov) / 255;
++              int blG = backColourG + ((G - backColourG) * cov) / 255;
++              int blB = backColourB + ((B - backColourB) * cov) / 255;
++              setPixel(penX + g->bitmap_left + col, baselineY - g->bitmap_top + row, blR, blG, blB);
++            }
++        }
++      penX += (g->advance.x >> 6);
++    }
++}
++
++// 角丸ボタン枠(1px)を描画する。直線部は角の半径分だけ内側にとどめ、4隅は
++// 三角関数で四分円を描く(高さ・幅とも小さいボタンなので負荷は無視できる)。
++static void drawRoundedButtonBorder(int x, int y, int w, int h, int radius, int R, int G, int B)
++{
++  int i, a;
++  for (i = x + radius; i <= x + w - radius; i++)
++    {
++      setPixel(i, y, R, G, B);
++      setPixel(i, y + h, R, G, B);
++    }
++  for (i = y + radius; i <= y + h - radius; i++)
++    {
++      setPixel(x, i, R, G, B);
++      setPixel(x + w, i, R, G, B);
++    }
++  for (a = 0; a <= 90; a++)
++    {
++      double rad = a * M_PI / 180.0;
++      int dx = (int)(radius * cos(rad) + 0.5);
++      int dy = (int)(radius * sin(rad) + 0.5);
++      setPixel(x + radius - dx, y + radius - dy, R, G, B);
++      setPixel(x + w - radius + dx, y + radius - dy, R, G, B);
++      setPixel(x + radius - dx, y + h - radius + dy, R, G, B);
++      setPixel(x + w - radius + dx, y + h - radius + dy, R, G, B);
++    }
++}
++
+ void displayButton(char*s)
+ {
+ int saveX=currentX;
+ int saveY=currentY;
+-for(int x=0;x<100;x++)
++
++gotoXY(saveX,saveY);
++clearButton();
++// ★Shonan_Lite-pi5統合版パッチ: 角丸ボタン枠+TTFアンチエイリアス文字に変更。
++// ttFontReady==0(フォント読込失敗)時は元の直角枠+ドットフォントへ戻る。
++drawRoundedButtonBorder(saveX,saveY,100,50,0,foreColourR,foreColourG,foreColourB);
++if (ttFontButtonReady)
+   {
+-    setPixel(currentX+x,currentY,foreColourR,foreColourG,foreColourB);
+-    setPixel(currentX+x,currentY+50,foreColourR,foreColourG,foreColourB);
++    FT_Set_Pixel_Sizes(ttFaceButton,0,23);
++    int tw=measureTextTTFFace(ttFaceButton,s);
++    drawTextTTFFace(ttFaceButton,s,saveX+(100-tw)/2,saveY+33,foreColourR,foreColourG,foreColourB);
+   }
+-for(int y=0;y<50;y++)
++else
+   {
+-    setPixel(currentX,currentY+y,foreColourR,foreColourG,foreColourB);
+-    setPixel(currentX+100,currentY+y,foreColourR,foreColourG,foreColourB);
++    int sx=50-((strlen(s)*16)/2);
++    gotoXY(saveX+sx,saveY+18);
++    textSize=2;
++    displayStr(s);
+   }
+-
+-gotoXY(saveX,saveY);
+-clearButton();
+-int sx=50-((strlen(s)*16)/2);  
+-gotoXY(saveX+sx,saveY+18);
+-textSize=2;
+-displayStr(s);
+ currentX=saveX+105;
+ currentY=saveY;
+ 
+@@ -134,27 +322,29 @@
+ {
+ int saveX=currentX;
+ int saveY=currentY;
+-for(int x=0;x<100;x++)
++
++gotoXY(saveX,saveY);
++clearButton();
++drawRoundedButtonBorder(saveX,saveY,100,50,0,foreColourR,foreColourG,foreColourB);
++if (ttFontButtonReady)
+   {
+-    setPixel(currentX+x,currentY,foreColourR,foreColourG,foreColourB);
+-    setPixel(currentX+x,currentY+50,foreColourR,foreColourG,foreColourB);
++    FT_Set_Pixel_Sizes(ttFaceButton,0,12);
++    int tw1=measureTextTTFFace(ttFaceButton,s1);
++    drawTextTTFFace(ttFaceButton,s1,saveX+(100-tw1)/2,saveY+22,foreColourR,foreColourG,foreColourB);
++    int tw2=measureTextTTFFace(ttFaceButton,s2);
++    drawTextTTFFace(ttFaceButton,s2,saveX+(100-tw2)/2,saveY+38,foreColourR,foreColourG,foreColourB);
+   }
+-for(int y=0;y<50;y++)
++else
+   {
+-    setPixel(currentX,currentY+y,foreColourR,foreColourG,foreColourB);
+-    setPixel(currentX+100,currentY+y,foreColourR,foreColourG,foreColourB);
++    int sx=50-((strlen(s1)*8)/2);
++    gotoXY(saveX+sx,saveY+11);
++    textSize=1;
++    displayStr(s1);
++    sx=50-((strlen(s2)*8)/2);
++    gotoXY(saveX+sx,saveY+29);
++    textSize=1;
++    displayStr(s2);
+   }
+-
+-gotoXY(saveX,saveY);
+-clearButton();
+-int sx=50-((strlen(s1)*8)/2);  
+-gotoXY(saveX+sx,saveY+11);
+-textSize=1;
+-displayStr(s1);
+-sx=50-((strlen(s2)*8)/2);  
+-gotoXY(saveX+sx,saveY+29);
+-textSize=1;
+-displayStr(s2);
+ currentX=saveX+105;
+ currentY=saveY;
+ }
+@@ -163,23 +353,23 @@
+ {
+ int saveX=currentX;
+ int saveY=currentY;
+-for(int x=0;x<100;x++)
++
++gotoXY(saveX,saveY);
++clearButton();
++drawRoundedButtonBorder(saveX,saveY,100,50,0,foreColourR,foreColourG,foreColourB);
++if (ttFontButtonReady)
+   {
+-    setPixel(currentX+x,currentY,foreColourR,foreColourG,foreColourB);
+-    setPixel(currentX+x,currentY+50,foreColourR,foreColourG,foreColourB);
++    FT_Set_Pixel_Sizes(ttFaceButton,0,14);
++    int tw=measureTextTTFFace(ttFaceButton,s1);
++    drawTextTTFFace(ttFaceButton,s1,saveX+(100-tw)/2,saveY+31,foreColourR,foreColourG,foreColourB);
+   }
+-for(int y=0;y<50;y++)
++else
+   {
+-    setPixel(currentX,currentY+y,foreColourR,foreColourG,foreColourB);
+-    setPixel(currentX+100,currentY+y,foreColourR,foreColourG,foreColourB);
++    int sx=50-((strlen(s1)*8)/2);
++    gotoXY(saveX+sx,saveY+20);
++    textSize=1;
++    displayStr(s1);
+   }
+-
+-gotoXY(saveX,saveY);
+-clearButton();
+-int sx=50-((strlen(s1)*8)/2);  
+-gotoXY(saveX+sx,saveY+20);
+-textSize=1;
+-displayStr(s1);
+ currentX=saveX+105;
+ currentY=saveY;
+ }
+diff -ruN a/LangstoneGUI_Pluto.c b/LangstoneGUI_Pluto.c
+--- a/LangstoneGUI_Pluto.c	2026-09-04 02:45:28.105642000 +0900
++++ b/LangstoneGUI_Pluto.c	2026-09-04 02:45:28.139361500 +0900
+@@ -14,15 +14,22 @@
+ #include "hmi.h"
+ #include "Morse.c"
+ #include <netdb.h>
+-#include <netinet/in.h>                                                                                                      
++#include <netinet/in.h>
+ #include <arpa/inet.h>
+ 
++// ★Shonan_Lite-pi5統合版パッチ: 大きな周波数表示(displayFreq)とボタン文字を
++// 既存の1bitドットフォント(Font.h/displayChar)ではなくFreeTypeでTTFフォントを
++// アンチエイリアス描画するようにした(「滑らかな書体」「ボタンも同じフォント」
++// 要望への対応)。FreeType状態(ttLibrary/ttFace/ttFontReady)とボタン側の
++// 描画関数はGraphics.hで共用定義している。
++
+ #define MAX_FILENAME_LENGTH 255
+ 
+ //#define PLUTOIP "ip:pluto.local"
+ 
+ char plutoip[30];
+ 
++void displayFreqTTF(double fr);
+ 
+ void setFreq(double fr);
+ void displayFreq(double fr);
+@@ -166,9 +173,13 @@
+ //GUI Layout values X and Y coordinates for each group of buttons.
+ 
+ #define volButtonX 660
+-#define volButtonY 300
++// ★Shonan_Lite-pi5統合版パッチ: ウォーターフォール下端(Y≈295)との間隔を
++// 広げるため、元の300から20px下げた。数値表示をボタン上から左横へ移した
++// 際、SQLボタン(sqlButtonY)より少し上に見えるよう10px上げ、さらにSQL/VOL
++// 両ボタンとも10px、追加で20px上へ移動した。
++#define volButtonY 305
+ #define sqlButtonX 30
+-#define sqlButtonY 300
++#define sqlButtonY 315
+ #define ritButtonX 670
+ #define ritButtonY 60
+ #define funcButtonsY 429
+@@ -193,8 +204,21 @@
+ #define settingY 390
+ #define popupX 30
+ #define popupY 374
+-#define FFTX 140
+-#define FFTY 216
++// ★Shonan_Lite-pi5統合版パッチ: ウォーターフォール/スペクトラム表示を拡張。
++// 横方向はSQLボタン(x=30〜130)/Volボタン(x=660〜)と同じY帯で重なるため
++// 広げる余地がほぼ無かった(実機で確認・一度SQLボタンが消える不具合を起こした)。
++// そこでスペクトラム欄の高さ(spectrum_rows)とウォーターフォールの表示履歴行数
++// (rows)を縮めて全体を上に詰め(FFTY)、周波数表示(下端Y≈120)とSQL/Volボタン
++// (上端Y=300)の間の帯(Y=130〜295)だけに収める。この帯はSQL/Vol/RITいずれとも
++// Y方向に重ならないため、横方向はほぼ画面全幅まで広げられる。
++// 実際のFFT点数(points、GNU Radio側のfft_size=512とUDPパケットサイズに直結する
++// ため変更不可)は512のままで、描画先の物理ピクセル幅(FFT_DISPLAY_WIDTH)を
++// SCALEPX()マクロで引き伸ばして表示する(帯域インジケータ・目盛り・タッチ判定も
++// 含め一貫して変換)。
++#define FFTX 40
++#define FFT_DISPLAY_WIDTH 720
++#define SCALEPX(v) ((int)((long)(v) * FFT_DISPLAY_WIDTH / points))
++#define FFTY 185
+ #define sMeterX 2
+ #define sMeterY 5
+ #define sMeterWidth 170
+@@ -315,9 +338,12 @@
+ FILE *txfftstream;
+ float buf[512][130];
+ int points=512;
+-int rows=130;
++// ★Shonan_Lite-pi5統合版パッチ: 画面上部に詰めて横幅を拡張するため、
++// スペクトラム欄の高さとウォーターフォールの表示履歴行数を縮小(元は130/80)。
++// buf[][]配列自体は130行分確保したままなので範囲外アクセスの心配はない。
++int rows=90;
+ int FFTRef = -30;
+-int spectrum_rows=80;
++int spectrum_rows=55;
+ unsigned char * palette;
+ int HzPerBin=94;                        //calculated from FFT width and number of samples. Width=48000 number of samples =512
+ int bwBarStart=3;
+@@ -364,6 +390,7 @@
+   initPluto();
+   initFifos();
+   initScreen();
++  initTTFont();
+   initGPIO();
+   printf("Initialising Touch at %s\n",touchPath);
+   if(touchPresent) initTouch(touchPath);
+@@ -655,41 +682,52 @@
+     
+         //draw waterfall
+         for(int r=0;r<rows;r++)
+-        {  
++        {
+           for(int p=0;p<points;p++)
+-          {                                                                                                           
++          {
+             //limit values displayed to range specified
+             if (buf[p][r]<baselevel) buf[p][r]=baselevel;
+             if (buf[p][r]>fftref) buf[p][r]=fftref;
+-    
++
+             //scale to 0-255
+-            level = (buf[p][r]-baselevel)*scaling;   
+-            setPixel(p+FFTX,FFTY+20+r,palette[level*3+2],palette[level*3+1],palette[level*3]);
++            level = (buf[p][r]-baselevel)*scaling;
++            // ★引き伸ばし描画: 隣の点の開始位置までを塗り、隙間や重複が出ないようにする。
++            {
++              int px0 = FFTX + SCALEPX(p);
++              int px1 = FFTX + SCALEPX(p+1);
++              if (px1<=px0) px1=px0+1;
++              for(int dx=px0; dx<px1; dx++)
++                setPixel(dx,FFTY+20+r,palette[level*3+2],palette[level*3+1],palette[level*3]);
++            }
+           }
+         }
+-    
++
+         //clear spectrum area
+         for(int r=0;r<spectrum_rows+1;r++)
+-        { 
++        {
+           for(int p=0;p<points;p++)
+-          {   
+-            setPixel(p+FFTX,FFTY-r,0,0,0);
++          {
++            int px0 = FFTX + SCALEPX(p);
++            int px1 = FFTX + SCALEPX(p+1);
++            if (px1<=px0) px1=px0+1;
++            for(int dx=px0; dx<px1; dx++)
++              setPixel(dx,FFTY-r,0,0,0);
+           }
+         }
+-    
++
+         //draw spectrum line
+-        
++
+         scaling = spectrum_rows/(float)(fftref-baselevel);
+         for(int p=0;p<points-1;p++)
+-        {  
++        {
+             //limit values displayed to range specified
+             if (buf[p][0]<baselevel) buf[p][0]=baselevel;
+             if (buf[p][0]>fftref) buf[p][0]=fftref;
+-    
++
+             //scale to display height
+-            level = (buf[p][0]-baselevel)*scaling;   
++            level = (buf[p][0]-baselevel)*scaling;
+             level2 = (buf[p+1][0]-baselevel)*scaling;
+-            drawLine(p+FFTX, FFTY-level, p+1+FFTX, FFTY-level2,255,255,255);
++            drawLine(FFTX+SCALEPX(p), FFTY-level, FFTX+SCALEPX(p+1), FFTY-level2,255,255,255);
+         }
+           
+           //draw Bandwidth indicator
+@@ -712,68 +750,68 @@
+            centreShift=0;          
+           }
+ 
+-          if(bwBarStart > -255) drawLine(p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows+5, p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows,255,140,0);
+-          drawLine(p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows, p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows,255,140,0);
+-          
+-          if(bwBarEnd < 255) drawLine(p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows+5, p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows,255,140,0);  
++          if(bwBarStart > -255) drawLine(FFTX+SCALEPX(p+bwBarStart-bwbaroffset), FFTY-spectrum_rows+5, FFTX+SCALEPX(p+bwBarStart-bwbaroffset), FFTY-spectrum_rows,255,140,0);
++          drawLine(FFTX+SCALEPX(p+bwBarStart-bwbaroffset), FFTY-spectrum_rows, FFTX+SCALEPX(p+bwBarEnd-bwbaroffset), FFTY-spectrum_rows,255,140,0);
++
++          if(bwBarEnd < 255) drawLine(FFTX+SCALEPX(p+bwBarEnd-bwbaroffset), FFTY-spectrum_rows+5, FFTX+SCALEPX(p+bwBarEnd-bwbaroffset), FFTY-spectrum_rows,255,140,0);
+           //draw centre line (displayed frequency)
+-          drawLine(p+FFTX+centreShift, FFTY-10, p+FFTX+centreShift, FFTY-spectrum_rows,255,0,0);  
+-          
+-          
+-          //draw x Axis. 
+-          int ticks[11] = {0,21,43,64,85,107,128,149,171,192,213};    // Rounded tick spacing at 21.333 pixels per tick 
+-          drawLine(FFTX,FFTY +3,FFTX + points,FFTY+3,0,255,0);
++          drawLine(FFTX+SCALEPX(p+centreShift), FFTY-10, FFTX+SCALEPX(p+centreShift), FFTY-spectrum_rows,255,0,0);
++
++
++          //draw x Axis.
++          int ticks[11] = {0,21,43,64,85,107,128,149,171,192,213};    // Rounded tick spacing at 21.333 pixels per tick
++          drawLine(FFTX,FFTY +3,FFTX + FFT_DISPLAY_WIDTH,FFTY+3,0,255,0);
+           for(int tick = 0;tick < 11;tick++)
+             {
+-             drawLine(FFTX + p + ticks[tick],FFTY+3,FFTX + p + ticks[tick],FFTY +5,0,255,0);
+-             drawLine(FFTX + p - ticks[tick],FFTY+3,FFTX + p - ticks[tick],FFTY +5,0,255,0); 
++             drawLine(FFTX + SCALEPX(p + ticks[tick]),FFTY+3,FFTX + SCALEPX(p + ticks[tick]),FFTY +5,0,255,0);
++             drawLine(FFTX + SCALEPX(p - ticks[tick]),FFTY+3,FFTX + SCALEPX(p - ticks[tick]),FFTY +5,0,255,0);
+             }
+-          
++
+           //draw scale
+           setForeColour(0,255,0);
+           textSize=1;
+-          gotoXY(p+FFTX-12,FFTY+8);
++          gotoXY(FFTX+SCALEPX(p)-12,FFTY+8);
+           displayStr(" 0 ");
+           switch(bandFFTBW[band])
+           {
+               case 0:                 //48KHz BW
+-              gotoXY(p+FFTX-ticks[5]-24,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[5])-24,FFTY+8);
+               displayStr(" -10k   ");
+-              gotoXY(p+FFTX-ticks[10]-24,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[10])-24,FFTY+8);
+               displayStr(" -20k   ");
+-              gotoXY(p+FFTX+ticks[5]-24,FFTY+8);
+-              displayStr(" +10k   ");                                                                                             
+-              gotoXY(p+FFTX+ticks[10]-24,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p+ticks[5])-24,FFTY+8);
++              displayStr(" +10k   ");
++              gotoXY(FFTX+SCALEPX(p+ticks[10])-24,FFTY+8);
+               displayStr(" +20k   ");
+             break;
+             case 1:                 //24KHz BW
+-              gotoXY(p+FFTX-ticks[5]-20,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[5])-20,FFTY+8);
+               displayStr(" -5k   ");
+-              gotoXY(p+FFTX-ticks[10]-24,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[10])-24,FFTY+8);
+               displayStr(" -10k   ");
+-              gotoXY(p+FFTX+ticks[5]-20,FFTY+8);
+-              displayStr(" +5k   ");                                                                                             
+-              gotoXY(p+FFTX+ticks[10]-24,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p+ticks[5])-20,FFTY+8);
++              displayStr(" +5k   ");
++              gotoXY(FFTX+SCALEPX(p+ticks[10])-24,FFTY+8);
+               displayStr(" +10k   ");
+             break;
+             case 2:                 //12KHz BW
+-              gotoXY(p+FFTX-ticks[5]-28,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[5])-28,FFTY+8);
+               displayStr(" -2.5k   ");
+-              gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[10])-20,FFTY+8);
+               displayStr(" -5k   ");
+-              gotoXY(p+FFTX+ticks[5]-28,FFTY+8);
+-              displayStr(" +2.5k   ");                                                                                             
+-              gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p+ticks[5])-28,FFTY+8);
++              displayStr(" +2.5k   ");
++              gotoXY(FFTX+SCALEPX(p+ticks[10])-20,FFTY+8);
+               displayStr(" +5k   ");
+             break;
+             case 3:                 //6KHz BW
+-              gotoXY(p+FFTX-ticks[5]-32,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[5])-32,FFTY+8);
+               displayStr(" -1.25k   ");
+-              gotoXY(p+FFTX-ticks[10]-28,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p-ticks[10])-28,FFTY+8);
+               displayStr(" -2.5k   ");
+-              gotoXY(p+FFTX+ticks[5]-32,FFTY+8);
+-              displayStr(" +1.25k   ");                                                                                             
+-              gotoXY(p+FFTX+ticks[10]-28,FFTY+8);
++              gotoXY(FFTX+SCALEPX(p+ticks[5])-32,FFTY+8);
++              displayStr(" +1.25k   ");
++              gotoXY(FFTX+SCALEPX(p+ticks[10])-28,FFTY+8);
+               displayStr(" +2.5k   ");
+             break;
+           }
+@@ -832,23 +870,20 @@
+           
+           
+           //Draw S meter
+-          drawLine(sMeterX,sMeterY,sMeterX+sMeterWidth,sMeterY,255,255,255);
+-          drawLine(sMeterX,sMeterY,sMeterX,sMeterY+sMeterHeight,255,255,255);
+-          drawLine(sMeterX,sMeterY+sMeterHeight,sMeterX+sMeterWidth,sMeterY+sMeterHeight,255,255,255);
+-          drawLine(sMeterX+sMeterWidth,sMeterY,sMeterX+sMeterWidth,sMeterY+sMeterHeight,255,255,255);          
++          // ★Shonan_Lite-pi5統合版パッチ: 不要とのことでS-メーターの白枠を削除。
+ 
+           for(int ln=0;ln<10;ln++)
+           {
+           if(sMeter<55)
+           {
+-          drawLine(sMeterX+5,sMeterY+5+ln,sMeterX+6+sMeter*2,sMeterY+5+ln,0,255,0);
++          drawLine(sMeterX+5,sMeterY+5+ln,sMeterX+6+sMeter*2,sMeterY+5+ln,255,255,255);
+           drawLine(sMeterX+6+sMeter*2,sMeterY+5+ln,sMeterX+6+160,sMeterY+5+ln,0,0,0);
+           }
+           else
+           {
+           int redbit=sMeterX+6+110+(sMeter-55)*2;
+           if(redbit > (sMeterX+6+160)) redbit= sMeterX+6+160;
+-          drawLine(sMeterX+5,sMeterY+5+ln,sMeterX+6+110,sMeterY+5+ln,0,255,0);
++          drawLine(sMeterX+5,sMeterY+5+ln,sMeterX+6+110,sMeterY+5+ln,255,255,255);
+           drawLine(sMeterX+6+110,sMeterY+5+ln,redbit,sMeterY+5+ln,255,0,0);
+           drawLine(redbit,sMeterY+5+ln,sMeterX+6+160,sMeterY+5+ln,0,0,0);
+           }
+@@ -969,10 +1004,7 @@
+              if(sMeter<0) sMeter=0;
+           
+           //Draw PO meter
+-          drawLine(sMeterX,sMeterY,sMeterX+sMeterWidth,sMeterY,255,255,255);
+-          drawLine(sMeterX,sMeterY,sMeterX,sMeterY+sMeterHeight,255,255,255);
+-          drawLine(sMeterX,sMeterY+sMeterHeight,sMeterX+sMeterWidth,sMeterY+sMeterHeight,255,255,255);
+-          drawLine(sMeterX+sMeterWidth,sMeterY,sMeterX+sMeterWidth,sMeterY+sMeterHeight,255,255,255);          
++          // ★Shonan_Lite-pi5統合版パッチ: 不要とのことでPOメーターの白枠も削除。
+ 
+           for(int ln=0;ln<10;ln++)
+           {
+@@ -1460,9 +1485,10 @@
+     }
+   displayButton("SQL");
+   textSize=2;
+-  gotoXY(sqlButtonX+30,sqlButtonY-25);
++  // ★Shonan_Lite-pi5統合版パッチ: 数値表示をボタン上から右横へ移動。
++  gotoXY(sqlButtonX+125,sqlButtonY+18);
+   displayStr("   ");
+-  gotoXY(sqlButtonX+30,sqlButtonY-25);
++  gotoXY(sqlButtonX+125,sqlButtonY+18);
+   sprintf(sqlStr,"%d",squelch);
+   displayStr(sqlStr);
+ }
+@@ -1478,8 +1504,7 @@
+   else
+     {
+       setForeColour(0,0,0);
+-      gotoXY(ritButtonX,ritButtonY+buttonSpaceY);
+-      displayButton("Zero"); 
++      // ★Shonan_Lite-pi5統合版パッチ: 不要とのことで「Zero」ボタン表示を削除。
+     }
+   gotoXY(ritButtonX,ritButtonY);
+   displayButton("RIT");
+@@ -1900,14 +1925,6 @@
+       }
+     }
+ 
+-//RIT Zero Button
+-
+-if(buttonTouched(ritButtonX,ritButtonY+buttonSpaceY))    //rit zero
+-    {
+-     setRit(0);
+-     setInputMode(FREQ);
+-    }
+-    
+ if(buttonTouched(sMeterX,sMeterY))                        //touch on s-Meter
+ {
+    if(sMeterType == 0)
+@@ -2062,15 +2079,49 @@
+          clearScreen();
+          writeConfig();
+          iio_context_destroy(plutoctx);
+-         sleep(2);                  
++         // ★Shonan_Lite-pi5統合版パッチ:「GOTO SHONAN_LITE」ボタン押下処理。
++         // 以前はPi5自体をrebootしてブート時マーカーファイルで戻り先を
++         // 切り替える方式だったが、shonan-boot-menu.service導入に伴い
++         // shonan-gui.service/langstone.service/shonan-boot-menu.serviceが
++         // 互いにsystemdのConflicts=で排他制御されるようになったため、
++         // rebootせずsystemctl startで直接切り替えられる
++         // (Shonan_Lite-pi5側install.sh、app/scripts/install.sh 9/9参照)。
++         // ★Pluto+はTX/RX切替を繰り返した後、IIOコンテキストが詰まったような
++         // 状態(fmcomms2_source: Unable to refill buffer)になることがあり、
++         // その状態のままShonan_Lite側に戻るとRX/TXが正常動作しないことがある
++         // (実機で確認)。切替のたびに必ずPluto+側はrebootしてクリーンな
++         // 状態にする(Pi5自体のrebootは不要になったが、これは維持する)。
++         {
++           // ★元は char cmd[128] だったが、実際に生成される文字列は167文字あり
++           // "-o PubkeyAuth"の途中で切り詰められ、root@<IP> rebootが丸ごと
++           // 欠落してsshがエラー終了、Pluto+にreboot命令が届いていなかった
++           // (実機で確認、「戻る」時だけPluto+がrebootされない不具合の原因)。
++           char cmd[320];
++           snprintf(cmd, sizeof(cmd),
++             "sshpass -p analog ssh -o StrictHostKeyChecking=accept-new "
++             "-o ConnectTimeout=6 -o PreferredAuthentications=password "
++             "-o PubkeyAuthentication=no root@%s reboot", plutoip+3);
++           system(cmd);
++         }
++         // ★systemd(langstone.service)は$HOMEを自動設定しないため、絶対パスで
++         // マーカーファイルを削除する(念のため、ConditionPathExists対策として
++         // 維持。systemctl start自体は直接指定したユニットを起動するので
++         // 本来は無くても動くが、手動でsystemctl restartされた場合の保険)。
++         system("rm -f /home/pi/.pi5_boot_mode_langstone");
++         sync();
++         // ★sudoers.d/shonan-pi5-rebootで許可済みのコマンド(shonan-boot-menu.py
++         // が起動時に使うものと同一)。Conflicts=によりlangstone.service(この
++         // プロセス自身)はsystemdが自動的に停止する。
++         system("sudo /bin/systemctl start --no-block shonan-gui.service");
++         sleep(1);
+          exit(0);
+       }
+       else
+       {
+       setInputMode(FREQ);
+       }
+-    } 
+-         
++    }
++
+ if(buttonTouched(funcButtonsX+buttonSpaceX*6,funcButtonsY))   //Button 7 = PTT  or OFF
+     {
+     if(inputMode==FREQ)
+@@ -2092,7 +2143,8 @@
+       sendFifo("Q");       //kill the SDR 
+       writeConfig();
+       iio_context_destroy(plutoctx);
+-      system("$HOME/Langstone/Screen_Message ""Langstone Stopped""");
++      // ★同上: systemd実行時は$HOMEが未設定のため絶対パスにする。
++      system("/home/pi/Langstone/Screen_Message ""Langstone Stopped""");
+       sleep(2);
+       system("sudo poweroff");                          
+       return;      
+@@ -2122,7 +2174,7 @@
+ 
+ 
+ //touch on spectrum display increments the FFT Bandwidth
+-if((touchY < FFTY) & (touchY > FFTY - spectrum_rows) & (touchX > FFTX) & (touchX < FFTX + points))   
++if((touchY < FFTY) & (touchY > FFTY - spectrum_rows) & (touchX > FFTX) & (touchX < FFTX + FFT_DISPLAY_WIDTH))   
+   {
+     bandFFTBW[band]++;
+     if(bandFFTBW[band] > 3)  bandFFTBW[band] = 0;
+@@ -2312,9 +2364,10 @@
+   sendFifo(volStr);
+   setForeColour(0,255,0);
+   textSize=2;
+-  gotoXY(volButtonX+30,volButtonY-25);
++  // ★Shonan_Lite-pi5統合版パッチ: 数値表示をボタン上から左横へ移動。
++  gotoXY(volButtonX-56,volButtonY+18);
+   displayStr("   ");
+-  gotoXY(volButtonX+30,volButtonY-25);
++  gotoXY(volButtonX-56,volButtonY+18);
+   sprintf(volStr,"%d",vol);
+   displayStr(volStr);
+   
+@@ -2327,9 +2380,10 @@
+   sprintf(sqlStr,"S%d",sql);
+   setForeColour(0,255,0);
+   textSize=2;
+-  gotoXY(sqlButtonX+30,sqlButtonY-25);
++  // ★Shonan_Lite-pi5統合版パッチ: 数値表示をボタン上から右横へ移動。
++  gotoXY(sqlButtonX+125,sqlButtonY+18);
+   displayStr("   ");
+-  gotoXY(sqlButtonX+30,sqlButtonY-25);
++  gotoXY(sqlButtonX+125,sqlButtonY+18);
+   sprintf(sqlStr,"%d",sql);
+   displayStr(sqlStr);
+   configCounter=configDelay;
+@@ -2366,11 +2420,8 @@
+     gotoXY(ritButtonX,ritButtonY);
+     setForeColour(0,255,0);
+     displayButton("RIT");
+-    gotoXY(ritButtonX,ritButtonY+buttonSpaceY);
+-    setForeColour(0,0,0);
+-    displayButton("Zero");
+   }
+-  
++
+ inputMode=m;
+ 
+ if(inputMode==FREQ)
+@@ -2402,9 +2453,6 @@
+     gotoXY(ritButtonX,ritButtonY);
+     setForeColour(255,0,0);
+     displayButton("RIT");
+-    gotoXY(ritButtonX,ritButtonY+buttonSpaceY);
+-    setForeColour(255,0,0);
+-    displayButton("Zero");
+   }
+ 
+ }
+@@ -2773,46 +2821,138 @@
+   setPlutoTxFreq(txfreqhz);          //Control Pluto directly to bypass problems with Gnu Radio Sink
+ }
+ 
++// ★Shonan_Lite-pi5統合版パッチ: 周波数表示スロット(48x54px)1文字分を
++// FreeTypeでアンチエイリアス描画する。先にスロットを背景色で塗りつぶし、
++// その上にグリフのカバレッジ(0-255)を前景色とブレンドして重ねる。
++// codepoint==' 'の場合は背景塗りつぶしのみ(空白扱い)。ttFaceはボタン描画
++// (displayButton等、Graphics.h参照)と共用のため、毎回このサイズへ設定し直す。
++static void drawFreqGlyphTTF(int codepoint, int slotX, int baselineY, int R, int G, int B)
++{
++  // ★freqDisplayCharHeight(54px)はドットフォント時代のセル高で、78pxの
++  // TTFグリフはbaselineY(freqDisplayY+60)基準で描画すると曲線を含む数字
++  // (6/3/2等)の底がこの範囲より下(y>freqDisplayY+53)にはみ出すことがある。
++  // クリア範囲がグリフ高さより狭いと、後続フレームでそのはみ出し部分が
++  // 消されずに残り「前の桁の数字の残像」に見える不具合があった。下線の
++  // 行(freqDisplayY+freqDisplayCharHeight+10)の手前まで広めにクリアする。
++  for (int y = 0; y < freqDisplayCharHeight+18; y++)
++    {
++      for (int x = 0; x < freqDisplayCharWidth; x++)
++        {
++          setPixel(slotX + x, freqDisplayY + y, backColourR, backColourG, backColourB);
++        }
++    }
++
++  if (codepoint == ' ') return;
++  FT_Set_Pixel_Sizes(ttFace, 0, 78);
++  if (FT_Load_Char(ttFace, (FT_ULong)codepoint, FT_LOAD_RENDER)) return;
++
++  FT_GlyphSlot g = ttFace->glyph;
++  int gw = g->bitmap.width;
++  int gh = g->bitmap.rows;
++  int originX = slotX + (freqDisplayCharWidth - gw) / 2;
++  int originY = baselineY - g->bitmap_top;
++
++  for (int row = 0; row < gh; row++)
++    {
++      for (int col = 0; col < gw; col++)
++        {
++          unsigned char cov = g->bitmap.buffer[row * g->bitmap.pitch + col];
++          if (cov == 0) continue;
++          int blR = backColourR + ((R - backColourR) * cov) / 255;
++          int blG = backColourG + ((G - backColourG) * cov) / 255;
++          int blB = backColourB + ((B - backColourB) * cov) / 255;
++          setPixel(originX + col, originY + row, blR, blG, blB);
++        }
++    }
++}
++
++void displayFreqTTF(double fr)
++{
++  long long freqhz;
++  char digit[16];
++  int baselineY = freqDisplayY + 60;
++  int slotX = freqDisplayX;
++  int R = 0, G = 200, B = 255;
++  int show1, show2, show3;
++
++  fr = fr + 0.0000001;
++  freqhz = fr * 1000000;
++  freqhz = freqhz + 100000000000;
++  sprintf(digit, "%lld", freqhz);
++
++  show1 = digit[1] > '0';
++  show2 = show1 | (digit[2] > '0');
++  show3 = show1 | (digit[2] > '0') | (digit[3] > '0');
++
++  drawFreqGlyphTTF(show1 ? digit[1] : ' ', slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(show2 ? digit[2] : ' ', slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(show3 ? digit[3] : ' ', slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[4], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[5], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF('.', slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[6], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[7], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[8], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF('.', slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[9], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++  drawFreqGlyphTTF(digit[10], slotX, baselineY, R, G, B); slotX += freqDisplayCharWidth;
++}
++
+ void displayFreq(double fr)
+ {
+   long long freqhz;
+-  char digit[16]; 
+-  
++  char digit[16];
++
+   fr=fr+0.0000001;   // correction for rounding errors.
+-  freqhz=fr*1000000;    
++  freqhz=fr*1000000;
+   freqhz=freqhz+100000000000;     //force it to be 12 digits long
+   sprintf(digit,"%lld",freqhz);
+-  
+-  gotoXY(freqDisplayX,freqDisplayY);
+-  setForeColour(0,0,255);
+-  textSize=6;
+-  if(digit[1]>'0') displayChar(digit[1]); else displayChar(' ');
+-  if((digit[1]>'0') | (digit[2]>'0')) displayChar(digit[2]); else displayChar(' ');
+-  if((digit[1]>'0') | (digit[2]>'0') | digit[3]>'0')  displayChar(digit[3]); else displayChar(' ');
+-  displayChar(digit[4]);
+-  displayChar(digit[5]);
+-  displayChar('.');
+-  displayChar(digit[6]);
+-  displayChar(digit[7]);
+-  displayChar(digit[8]);
+-  displayChar('.');
+-  displayChar(digit[9]);
+-  displayChar(digit[10]);
+-  
+-// Underline the currently selected tuning digit
+-  
+-  for(int dtd=0;dtd<12;dtd++)
+-    {
+-      gotoXY(freqDisplayX+dtd*freqDisplayCharWidth+4,freqDisplayY+freqDisplayCharHeight+5);
+-      int bb = 0;
+-      if (dtd==tuneDigit) bb=255;
+-      for(int p=0; p < freqDisplayCharWidth; p++)
+-        {
+-          setPixel(currentX+p,currentY+1,0,0,bb);
+-          setPixel(currentX+p,currentY+2,0,0,bb);
+-          setPixel(currentX+p,currentY+3,0,0,bb);
+-        }
++
++  // ★Shonan_Lite-pi5統合版パッチ: 周波数表示の文字色を青から水色に変更。
++  setForeColour(0,200,255);
++
++  if (ttFontReady)
++    {
++      displayFreqTTF(fr);
+     }
++  else
++    {
++      gotoXY(freqDisplayX,freqDisplayY);
++      textSize=6;
++      if(digit[1]>'0') displayChar(digit[1]); else displayChar(' ');
++      if((digit[1]>'0') | (digit[2]>'0')) displayChar(digit[2]); else displayChar(' ');
++      if((digit[1]>'0') | (digit[2]>'0') | digit[3]>'0')  displayChar(digit[3]); else displayChar(' ');
++      displayChar(digit[4]);
++      displayChar(digit[5]);
++      displayChar('.');
++      displayChar(digit[6]);
++      displayChar(digit[7]);
++      displayChar(digit[8]);
++      displayChar('.');
++      displayChar(digit[9]);
++      displayChar(digit[10]);
++    }
++
++// ★Shonan_Lite-pi5統合版パッチ: 選択中のチューニング桁を下線で示す。
++// 元は全12桁に線を描画し非選択桁も黒線として見えてしまっていたため、
++// 選択中の桁(tuneDigit)だけ描画するように変更。色は青、位置は元より
++// 少し下げている。桁を移動すると前回位置の線が残ってしまっていたため、
++// 毎回まず12桁分の帯全体を背景色で消してから選択中の桁だけ描画する。
++  {
++    int dtd;
++    int underlineY = freqDisplayY+freqDisplayCharHeight+10;
++    for(dtd=0; dtd<12; dtd++)
++      {
++        gotoXY(freqDisplayX+dtd*freqDisplayCharWidth+4,underlineY);
++        for(int p=0; p < freqDisplayCharWidth; p++)
++          {
++            int on = (dtd==tuneDigit);
++            setPixel(currentX+p,currentY+1, on?0:backColourR, on?150:backColourG, on?255:backColourB);
++            setPixel(currentX+p,currentY+2, on?0:backColourR, on?150:backColourG, on?255:backColourB);
++            setPixel(currentX+p,currentY+3, on?0:backColourR, on?150:backColourG, on?255:backColourB);
++          }
++      }
++  }
+ 
+ }
+ 
+@@ -3926,7 +4063,8 @@
+ {
+    printf("Starting GNU Radio\n");
+    FFTTimeout = FFTTIMEOUT * 5;                                //allow time to start
+-   system("python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
++   // ★同上: systemd実行時は$HOMEが未設定のため絶対パスにする。
++   system("python /home/pi/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
+ }
+ 
+ void restartGNURadio(void)
+diff -ruN a/run_pluto b/run_pluto
+--- a/run_pluto	2026-09-04 02:45:28.170291400 +0900
++++ b/run_pluto	2026-09-04 02:45:28.203626800 +0900
+@@ -7,7 +7,21 @@
+ 
+ $HOME/Langstone/Screen_Message "Langstone Loading"
+ 
+-export PLUTO_IP=pluto.local
++# ★Shonan_Lite-pi5統合版パッチ: 固定IPの決め打ちをやめ、Shonan_Lite側の
++# 設定ファイル(~/.config/shonan-pi5/settings.json、pluto_uri)と共有する。
++# 起動メニュー(app/gui/boot_menu.py)の「Pluto IP設定」で変更した値が
++# そのままここに反映される(設定が無ければ既定値192.168.0.10を使う)。
++export PLUTO_IP=$(python3 -c "
++import json
++from pathlib import Path
++p = Path.home() / '.config' / 'shonan-pi5' / 'settings.json'
++try:
++    d = json.loads(p.read_text())
++    uri = d.get('pluto_uri', 'ip:192.168.0.10')
++    print(uri[3:] if uri.startswith('ip:') else uri)
++except Exception:
++    print('192.168.0.10')
++" 2>/dev/null)
+ 
+ #Create command pipe
+ if test -e /tmp/langstoneTRx ;then
+@@ -21,8 +35,13 @@
+    sudo amixer -c 2 cset numid=8 50%  > /dev/null 2>&1
+    $HOME/Langstone/Screen_Message "Langstone Loading" "Checking Pluto"
+    
++   # ★Shonan_Lite-pi5統合版パッチ: Home画面の「Langstone V3」ボタンはPi5の
++   # rebootと同時にPluto+もrebootする。Pluto+の起動には実機で20〜40秒程度
++   # かかることがあり、元の4回(最大4秒)のping再試行では間に合わず
++   # "Pluto not responding"と誤表示することを実機で確認した。60回(最大60秒)
++   # まで待つように延長する。
+    retry=0
+-   until [ ${retry} -ge 4 ]
++   until [ ${retry} -ge 60 ]
+    do
+       (ping -c1 $PLUTO_IP 2>/dev/null |grep -q received) && break
+        retry=$[${retry}+1]
+@@ -31,7 +50,7 @@
+ 
+    #Check if Pluto failed to respond
+ 
+-   if [ ${retry} -ge 4 ]; then
++   if [ ${retry} -ge 60 ]; then
+       clear
+       $HOME/Langstone/Screen_Message "Pluto Failed to Respond" "Check Power" "And Connections"
+       sleep 5
+diff -ruN a/stop_pluto b/stop_pluto
+--- a/stop_pluto	2026-09-04 02:45:28.239986000 +0900
++++ b/stop_pluto	2026-09-04 02:45:28.270986900 +0900
+@@ -2,7 +2,7 @@
+ # Please use the command ./set_pluto to change the IP address if required.
+ # This will ensure that all necessary files are updated, including this one. 
+ 
+-PLUTO_IP=pluto.local
++PLUTO_IP=192.168.0.136
+ 
+ echo Stopping GNU Radio Modules
+ killall python >/dev/null 2>&1
