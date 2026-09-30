@@ -384,6 +384,8 @@ assembly drawing: [`w5500-esp32_実装図_部品番号.pdf`](hardware/W5500_PA_P
   Based on the design of rpi-dvbs2-receiver-gui.
 - 受信部安定化調査修正・再捕捉修正・本アプリ開発: 真城和一  
   Reception stability investigation and fixes, re-acquisition fixes, and development of this app: Kazuichi Shinjo
+- 本アプリは、Dave Crump氏(G8GKQ)が開発したDATV送受信機プロジェクト「Portsdown」に啓発され、開発したものです。同氏の先駆的な取り組みに感謝いたします。  
+  This application was developed inspired by "Portsdown", the DATV transceiver project created by Dave Crump (G8GKQ). We extend our deep gratitude for his pioneering work.
 
 ## 免責事項 / Disclaimer
 
