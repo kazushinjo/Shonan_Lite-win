@@ -44,3 +44,6 @@ build_installer/build/
 build_installer/output/
 build_installer/staging/
 build_installer/work/
+
+# KiCadの画面の状態(レイヤーの表示・拡大率など)。設計データではないので管理しない
+*.kicad_prl
