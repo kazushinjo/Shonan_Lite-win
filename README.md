@@ -244,15 +244,13 @@ TX and RX are used one at a time, not simultaneously).
 
 ### 事前準備 / Preparation
 
-- Plutoはファームウェアv0.32-dirtyを用意する。  
-  Prepare a Pluto with firmware v0.32-dirty.
-- USB-イーサネットアダプタを接続する。（電源を忘れずに繋ぐ）  
-  Connect a USB-Ethernet adapter. Don't forget to connect power.
+Pluto(ファームウェアv0.32-dirty)を、次のどちらかでPCとつなぐ。  
+Connect the Pluto (firmware v0.32-dirty) to the PC in one of the following ways.
 
-または / or
-
-- データ通信用USBケーブルでPCに接続する。  
-  Connect it to the PC with a data USB cable.
+- USB-イーサネットアダプタで接続する(アダプタの電源を忘れずにつなぐ)。  
+  With a USB-Ethernet adapter (don't forget to connect its power).
+- データ通信用USBケーブルで接続する。  
+  With a data USB cable.
 
 ### 手順 / Steps
 
@@ -262,27 +260,15 @@ TX and RX are used one at a time, not simultaneously).
    In **Settings**, confirm "On-device demodulation (GNU Radio)" is unchecked.
 3. **映像ソース**で「カメラ」を選択する。  
    In **Video source**, select "Camera".
-4. **変調方式**で「QPSK」を選択する。  
-   In **Modulation**, select "QPSK".
-5. **誤り訂正(FEC)**で「3/5」を選択する。  
-   In **FEC**, select "3/5".
-6. **出力設定**でPluto URIの「自動検出」をクリックする。  
-   In **Output settings**, click "Detect" next to the Pluto URI.
-7. **シンボルレート**で「500K」を選択する。  
-   In **Symbol rate**, select "500K".
-8. **周波数**で「1273MHz」を選択する。（実際の運用周波数に変更）  
-   In **Frequency**, select "1273 MHz". Change it to your actual operating frequency.
-9. **TX出力**は「0dB」(既定値)のままにする。  
-   Leave **TX power** at "0 dB" (the default).
-10. **RXゲイン**は「60dB」(既定値)のままにする。  
-    Leave **RX gain** at "60 dB" (the default).
-11. 送信する場合: Home画面で「送信」をクリックし、「送信開始」をクリックすると送信が始まる。  
-    To transmit: on the Home screen, click "Transmit", then click "Start TX" to begin transmitting.
+4. **変調方式**・**誤り訂正(FEC)**・**出力設定**・**シンボルレート**・**周波数**・**TX出力**・**RXゲイン**は、上の「動作確認クイックスタート」の手順4〜10と同じにする。ただし周波数は実際の運用周波数にする。  
+   Set **Modulation**, **FEC**, **Output settings**, **Symbol rate**, **Frequency**, **TX power** and **RX gain** the same as steps 4–10 of the "Function check quick start" above, except that the frequency should be your actual operating frequency.
+5. 送信する場合: Home画面で「送信」をクリックし、「送信開始」をクリックすると送信が始まる。  
+   To transmit: on the Home screen, click "Transmit", then click "Start TX" to begin transmitting.
 
-    または / or
+   または / or
 
-    受信する場合: Home画面で「受信」をクリックし、「受信開始」をクリックすると受信が始まる。  
-    To receive: on the Home screen, click "Receive", then click "Start RX" to begin receiving.
+   受信する場合: Home画面で「受信」をクリックし、「受信開始」をクリックすると受信が始まる。  
+   To receive: on the Home screen, click "Receive", then click "Start RX" to begin receiving.
 
 ## オプション: ESP32 W5500(PA_Power/PTTコントローラ) / Option: ESP32 W5500 (PA_Power/PTT controller)
 
