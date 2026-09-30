@@ -291,6 +291,66 @@ TX and RX are used one at a time, not simultaneously).
     受信する場合: Home画面で「受信」をクリックし、「受信開始」をクリックすると受信が始まる。  
     To receive: on the Home screen, click "Receive", then click "Start RX" to begin receiving.
 
+## オプション: ESP32 W5500(PA_Power/PTTコントローラ) / Option: ESP32 W5500 (PA_Power/PTT controller)
+
+ESP32とW5500(有線LAN)で、PA等の12 V電源とPTTをLAN経由でON/OFFするオプションの制御基板。
+使わなくてもShonan_Liteは動作する。Windows版にはPi版のGPIO21によるPTT出力がないため、PA・LNAの送受信切替を自動で行うにはこの基板を使う。
+ファームウェアは[`hardware/W5500_PA_PTT_Control/W5500_PA_PTT_Control.ino`](hardware/W5500_PA_PTT_Control/W5500_PA_PTT_Control.ino)、
+基板は[`hardware/W5500_PA_PTT_Control/kicad/`](hardware/W5500_PA_PTT_Control/kicad/)(KiCad、Rev.2.6)。基板とファームウェアはShonan_Lite-RasPI5版と共通。
+
+| 基板の3D表示 / 3D view of the board | 基板レイアウト(KiCad) / PCB layout (KiCad) | ケース(OpenSCAD) / Case (OpenSCAD) |
+| --- | --- | --- |
+| ![基板の3D表示](hardware/W5500_PA_PTT_Control/fabrication/assembly/w5500-esp32_3D_iso_全部品.png) | ![基板レイアウト](hardware/W5500_PA_PTT_Control/docs/images/w5500-esp32_pcb_layout.png) | ![ケース](hardware/W5500_PA_PTT_Control/docs/images/w5500-esp32_case.png) |
+
+| 項目<br>Item | 内容<br>Details |
+| --- | --- |
+| 構成<br>Configuration | Freenove ESP32-WROOM-32E DevKitC(ソケットに差し込み)+W5500 Lite(SPI接続)<br>Freenove ESP32-WROOM-32E DevKitC (plugged into a socket) + W5500 Lite (SPI) |
+| 12 V電源<br>12 V power | 2SJ334(Pチャネル MOSFET)のハイサイドスイッチでJ5の12 V出力をON/OFF。放熱器付きで目安は約7 Aまで<br>J5's 12 V output is switched by a 2SJ334 (P-channel MOSFET) high-side switch; with its heatsink, up to about 7 A |
+| PTT<br>PTT | 2SC1815で無線機のPTT端子をGNDへ落とす(J6)<br>A 2SC1815 pulls the radio's PTT line to GND (J6) |
+| 電源入力<br>Power input | +12 V(13.8 V系)をJ2へ。L7805で5 V(ESP32)、TA48033Sで3.3 V(W5500)を作る<br>+12 V (13.8 V class) to J2; an L7805 makes 5 V (ESP32) and a TA48033S makes 3.3 V (W5500) |
+| 表示LED<br>Indicator LEDs | 外付け。J7=12 V出力(赤)、J8=12 V入力(緑)(JST XH)<br>External; J7 = 12 V output (red), J8 = 12 V input (green) (JST XH) |
+| ネットワーク<br>Network | 固定IP(初期値`192.168.0.100`)。ブラウザで`http://<IP>/`を開くと手動でON/OFFでき、`http://<IP>/config`でIPや遅延時間を変更できる<br>Static IP (default `192.168.0.100`); open `http://<IP>/` in a browser to switch ON/OFF manually, and `http://<IP>/config` to change the IP and delays |
+| 基板<br>Board | 72×115 mm、4層(内層はGNDと+12Vのベタ)、部品はすべてスルーホール。JLCPCBの発注データは[`fabrication/jlcpcb/`](hardware/W5500_PA_PTT_Control/fabrication/jlcpcb/)<br>72×115 mm, 4 layers (inner layers are GND and +12 V planes), all through-hole parts. JLCPCB order data is in [`fabrication/jlcpcb/`](hardware/W5500_PA_PTT_Control/fabrication/jlcpcb/) |
+| ケース<br>Case | OpenSCAD(LAN_PTT.scad)、内寸80×120×35 mm。前面にRJ45の角穴と+12V入力の丸型コネクタ、背面にUSBの穴と12 V出力・PTTの丸型コネクタ<br>OpenSCAD (LAN_PTT.scad), inside 80×120×35 mm. RJ45 opening and +12 V input circular connector on the front; USB opening and 12 V output/PTT circular connector on the back |
+
+Shonan_Lite(Windows版)での使い方:
+
+- 設定画面の「PA_Power/PTTコントローラ (ESP32)」に、ESP32のIPアドレス(またはホスト名)を入力する。空欄なら連携しない。
+- アプリの起動から5秒後に12 V電源(Pluto含む)をON、アプリ終了時にOFFにし、送信開始/終了に連動してPTTを自動でON/OFFする。
+- Windows版にはホーム画面の「Pluto電源」カードはない。
+
+詳しくは[仕様書](hardware/W5500_PA_PTT_Control/docs/W5500_PA_PTT_Control_仕様書.md)と
+[接続一覧](hardware/W5500_PA_PTT_Control/docs/MCU1_J1_W5500_接続一覧.md)を参照(どちらも日英併記。Word版・PDF版も同じフォルダにある)。
+回路図: [`w5500-esp32.pdf`](hardware/W5500_PA_PTT_Control/kicad/w5500-esp32.pdf)、
+実装図: [`w5500-esp32_実装図_部品番号.pdf`](hardware/W5500_PA_PTT_Control/fabrication/assembly/w5500-esp32_実装図_部品番号.pdf)。
+
+> [!NOTE]
+> ESP32への書き込みと起動は確認済み。12 V電源・PTTの駆動回路と無線機をつないだ実地試験はまだ行っていない。
+
+<!-- English -->
+
+An optional control board that uses an ESP32 and a W5500 (wired LAN) to switch the 12 V power for the PA etc.
+and the PTT ON/OFF over the LAN. Shonan_Lite works without it. The Windows edition has no PTT output on GPIO21 like the Pi editions, so use this board to switch the PA/LNA between TX and RX automatically.
+The firmware is [`hardware/W5500_PA_PTT_Control/W5500_PA_PTT_Control.ino`](hardware/W5500_PA_PTT_Control/W5500_PA_PTT_Control.ino)
+and the board is in [`hardware/W5500_PA_PTT_Control/kicad/`](hardware/W5500_PA_PTT_Control/kicad/) (KiCad, Rev.2.6). The board and firmware are shared with the
+Shonan_Lite-RasPI5 edition.
+
+How to use it with Shonan_Lite (Windows edition):
+
+- On the Settings screen, enter the ESP32's IP address (or hostname) under "PA_Power/PTT Controller (ESP32)". Leave it empty to disable the link.
+- The 12 V power (including the Pluto) is turned ON 5 seconds after app start and OFF at app exit, and the PTT follows TX start/stop automatically.
+- The Windows edition has no "Pluto Power" card on the Home screen.
+
+For details, see the [specification](hardware/W5500_PA_PTT_Control/docs/W5500_PA_PTT_Control_仕様書.md) and the
+[connection list](hardware/W5500_PA_PTT_Control/docs/MCU1_J1_W5500_接続一覧.md) (both in Japanese and English;
+Word and PDF versions are in the same folder).
+Schematic: [`w5500-esp32.pdf`](hardware/W5500_PA_PTT_Control/kicad/w5500-esp32.pdf);
+assembly drawing: [`w5500-esp32_実装図_部品番号.pdf`](hardware/W5500_PA_PTT_Control/fabrication/assembly/w5500-esp32_実装図_部品番号.pdf).
+
+> [!NOTE]
+> Flashing and booting the ESP32 have been confirmed. A field test with the 12 V power/PTT drive circuits
+> connected to a radio has not been done yet.
+
 ## 関連ドキュメント / Related documents
 
 - [`docs/install_manual_windows.md`](docs/install_manual_windows.md) — 配布インストーラの完全インストールマニュアル /  
@@ -305,6 +365,14 @@ TX and RX are used one at a time, not simultaneously).
 - GUIの操作説明書(アプリ内Helpと同内容) / GUI operation manual (same content as the in-app Help):
   [`app/gui/manual_content_win.py`](app/gui/manual_content_win.py)(日本語 / Japanese),
   [`app/gui/manual_content_win_en.py`](app/gui/manual_content_win_en.py)(English)
+- [`hardware/W5500_PA_PTT_Control/docs/W5500_PA_PTT_Control_仕様書.md`](hardware/W5500_PA_PTT_Control/docs/W5500_PA_PTT_Control_仕様書.md) — ESP32 W5500(PA_Power/PTTコントローラ)の仕様書(日英併記) /  
+  Specification of the ESP32 W5500 (PA_Power/PTT controller) (Japanese and English)
+- [`hardware/W5500_PA_PTT_Control/docs/MCU1_J1_W5500_接続一覧.md`](hardware/W5500_PA_PTT_Control/docs/MCU1_J1_W5500_接続一覧.md) — ESP32・W5500の接続一覧(日英併記) /  
+  Connection list of the ESP32 and W5500 (Japanese and English)
+  - 仕様書・接続一覧のWord版・PDF版は[`hardware/W5500_PA_PTT_Control/docs/tools/build_docs.py`](hardware/W5500_PA_PTT_Control/docs/tools/build_docs.py)でMarkdownから作る(macOSで実行) /  
+    The Word and PDF versions are generated from Markdown with this script (run on macOS)
+- [`hardware/W5500_PA_PTT_Control/kicad/`](hardware/W5500_PA_PTT_Control/kicad/) — ESP32 W5500制御基板のKiCad回路図・基板 /  
+  KiCad schematic and PCB of the ESP32 W5500 control board
 - [`app/third_party/rpi-dvbs2-receiver-gui/`](app/third_party/rpi-dvbs2-receiver-gui/) — GNU Radio/gr-dvbs2rx受信フローグラフの参考実装(kazushinjo/rpi-dvbs2-receiver-guiより取り込み) /  
   Reference implementation of the GNU Radio/gr-dvbs2rx receive flowgraph (imported from kazushinjo/rpi-dvbs2-receiver-gui)
 
