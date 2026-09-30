@@ -224,20 +224,13 @@ The shortest procedure to check transmission and reception on a Windows PC by lo
     Leave **RX gain** at "60 dB" (the default).
 11. 送信画面で「送信開始」をクリックすると送信が始まる(ON AIR表示)。  
     On the TX screen, click "Start TX" to start transmitting (shown as ON AIR).
-
-    ![送信中](app/docs/images/screenshot_tx_win.png)
-
 12. 「受信画面へ」をクリックする。  
     Click "Go to RX".
 13. 「受信開始」をクリックすると受信が始まる。数秒でLOCKし、テストパターン映像が表示される。  
     Click "Start RX" to start receiving. It locks within a few seconds and the test pattern video appears.
 
-    ![受信LOCK](app/docs/images/screenshot_rx_win.png)
-
-これで送受信の基本動作が確認できる。RSSI測定で実際にTX信号のピークをスキャンした例:  
-This confirms the basic TX/RX operation. Example of RSSI Measurement actually scanning and finding the TX signal peak:
-
-![RSSI測定](app/docs/images/screenshot_rssi_win.jpg)
+これで送受信の基本動作が確認できる。送信中・受信LOCK・RSSI測定(TX信号のピークをスキャンした例)の画面は、上の「スクリーンショット」を参照。  
+This confirms the basic TX/RX operation. For the screens while transmitting, RX locked and RSSI Measurement (an example that scans and finds the TX signal peak), see "Screenshots" above.
 
 ## Windows PC用実運用クイックスタートガイド / Windows PC real-operation quick start guide
 
