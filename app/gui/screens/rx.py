@@ -25,6 +25,7 @@ class RxScreen(SettingsSubScreen):
         self._last_rate_packets = None
         self._last_rate_time = None
         self._bitrate_mbps = 0.0
+        self._packets_per_sec = 0.0
         self._video_fullscreen = False
         # Android/iPad版のRFループバック同時試験に相当。設定でONの場合、受信開始と
         # 同時に同じPluto+へ実際のカメラ映像を送出するTXも自動的に開始し、受信停止
@@ -97,6 +98,8 @@ class RxScreen(SettingsSubScreen):
         self.state_value = self._add_field(stats_grid, 0, 0, tr("状態", "State"))
         self.bitrate_value = self._add_field(stats_grid, 0, 1, tr("ビットレート", "Bitrate"))
         self.packets_value = self._add_field(stats_grid, 1, 0, tr("パケット/秒", "Pkts/s"))
+        # 受信したTSパケットの累計(以前は「パケット/秒」欄に累計を表示していた)。
+        self.total_packets_value = self._add_field(stats_grid, 2, 0, tr("受信パケット数", "Total pkts"))
         self.errors_value = self._add_field(stats_grid, 1, 1, tr("エラー", "Errors"))
         status_layout.addLayout(stats_grid)
         status_layout.addStretch(1)
@@ -208,6 +211,7 @@ class RxScreen(SettingsSubScreen):
         self._last_rate_packets = None
         self._last_rate_time = None
         self._bitrate_mbps = 0.0
+        self._packets_per_sec = 0.0
         self._set_stats(False, 0, 0)
 
     def _on_volume_changed(self, value: int) -> None:
@@ -263,6 +267,7 @@ class RxScreen(SettingsSubScreen):
             if elapsed > 0 and packet_delta >= 0:
                 # MPEG-TSは188バイト/パケット。直近ステータス間の実測値。
                 self._bitrate_mbps = packet_delta * 188 * 8 / elapsed / 1_000_000
+                self._packets_per_sec = packet_delta / elapsed
         self._last_rate_packets = packets
         self._last_rate_time = now
         self._sync_button_state(locked)
@@ -272,7 +277,8 @@ class RxScreen(SettingsSubScreen):
         self.state_value.setText(tr("接続中", "Lock") if locked else tr("切断中", "No Lock"))
         error_text = str(errors) if errors < 1_000_000 else "999999+"
         self.bitrate_value.setText(f"{self._bitrate_mbps:.2f} Mbps")
-        self.packets_value.setText(str(packets))
+        self.packets_value.setText(f"{self._packets_per_sec:.0f}")
+        self.total_packets_value.setText(str(packets))
         self.errors_value.setText(error_text)
 
     def _on_error(self, message: str) -> None:
@@ -289,6 +295,7 @@ class RxScreen(SettingsSubScreen):
         self._last_rate_packets = None
         self._last_rate_time = None
         self._bitrate_mbps = 0.0
+        self._packets_per_sec = 0.0
 
     def _on_video_frame(self, data: bytes, width: int, height: int) -> None:
         image = QtGui.QImage(data, width, height, width * 3, QtGui.QImage.Format_RGB888).copy()
