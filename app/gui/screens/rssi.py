@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import dataclasses
 import subprocess
+import time
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -11,7 +12,14 @@ from widgets import SettingsSubScreen
 from i18n import tr
 
 IIO_ATTR_BIN = platform_compat.find_binary("iio_attr", "/usr/bin/iio_attr")
-STEP_INTERVAL_MS = 150
+# ★iPad版で試した結果に合わせて短縮(2026-10-04)。以前の150msは測定値の安定には使われて
+# いなかった(RSSIを読んだ後の待ちだった)ため0にし、代わりに受信LOを変えてからRSSIを
+# 読むまでにRSSI_SETTLE_SECを置く。
+STEP_INTERVAL_MS = 0
+RSSI_SETTLE_SEC = 0.003
+# オンデバイス復調ON時、検索用の送信を始めてから測定を始めるまでの待ち(以前は3秒。0にすると
+# 送信の立ち上がり中の一時的なピークを拾うことをiPad版で確認し、1秒にした)。
+TX_SETTLE_MS = 1000
 # RXゲイン(AD9361の手動ゲイン範囲。RXゲイン画面のスライダーと同じ)
 RX_GAIN_MIN_DB = 0
 RX_GAIN_MAX_DB = 73
@@ -225,7 +233,7 @@ class RssiScreen(SettingsSubScreen):
 
         left_layout.addWidget(QtWidgets.QLabel(tr("ステップ", "Step")))
         step_row = QtWidgets.QHBoxLayout()
-        self.step_edit = QtWidgets.QLineEdit("100")
+        self.step_edit = QtWidgets.QLineEdit("200")
         self.step_edit.setAlignment(QtCore.Qt.AlignRight)
         self.step_edit.setMaximumWidth(130)
         self.step_edit.setStyleSheet(self._EDIT_STYLE)
@@ -486,9 +494,9 @@ class RssiScreen(SettingsSubScreen):
         elif settings.use_on_device_demod:
             self.main_window.tx_controller.start(self._scan_tx_settings())
             self._tx_started_by_scan = True
-            # ★TX起動直後は送信がまだ安定していないため、送信開始から3秒待って
+            # ★TX起動直後は送信がまだ安定していないため、送信開始からTX_SETTLE_MS待って
             # からスキャンループ(RSSI測定)を開始する。
-            QtCore.QTimer.singleShot(3000, self._start_timer_if_still_scanning)
+            QtCore.QTimer.singleShot(TX_SETTLE_MS, self._start_timer_if_still_scanning)
         else:
             self.timer.start(STEP_INTERVAL_MS)
 
@@ -501,7 +509,7 @@ class RssiScreen(SettingsSubScreen):
             QtCore.QTimer.singleShot(100, self._start_tx_after_stop_for_scan)
             return
         self.main_window.tx_controller.start(self._scan_tx_settings())
-        QtCore.QTimer.singleShot(3000, self._start_timer_if_still_scanning)
+        QtCore.QTimer.singleShot(TX_SETTLE_MS, self._start_timer_if_still_scanning)
 
     def _scan_tx_settings(self):
         """検索用の自動送信に使う設定。映像ソースの選択に関係なくテストパターンで送る。
@@ -516,7 +524,7 @@ class RssiScreen(SettingsSubScreen):
                                    video_source="colorbar", use_color_bar_source=True)
 
     def _start_timer_if_still_scanning(self) -> None:
-        # ★3秒の待機中に「検索停止」が押されていた場合は何もしない。
+        # ★TX_SETTLE_MSの待機中に「検索停止」が押されていた場合は何もしない。
         if not self._scanning:
             return
         # ★TX側がffmpeg起動失敗等で実際には送信を開始できていない場合、
@@ -653,6 +661,7 @@ class RssiScreen(SettingsSubScreen):
             subprocess.run([IIO_ATTR_BIN, "-u", settings.pluto_uri, "-c", "ad9361-phy",
                             "altvoltage0", "frequency", str(freq)], capture_output=True, timeout=2,
                             **platform_compat.no_window_kwargs())
+            time.sleep(RSSI_SETTLE_SEC)
             result = subprocess.run([IIO_ATTR_BIN, "-u", settings.pluto_uri, "-c", "ad9361-phy",
                                      "voltage0", "rssi"], capture_output=True, text=True, timeout=2,
                                      **platform_compat.no_window_kwargs())
