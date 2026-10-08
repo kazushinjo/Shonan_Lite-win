@@ -1,2 +1,4 @@
 # パッチファイルは改行をLFのままにする(CRLFに変換されるとgit applyが失敗するため)
 *.patch text eol=lf
+# BSch3Vの回路図(Shift_JIS・CRLF)は改行を変換しない
+*.CE3 binary
