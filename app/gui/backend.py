@@ -149,6 +149,31 @@ _TX_VIDEO_SCALE_FILTER = (
 )
 
 
+def _video_encoder_args(settings: AppSettings, video_kbps: int) -> list[str]:
+    """送信映像の符号化引数。settings.video_codecでH.264/H.265を切り替える(Pi5版と同じ)。"""
+    if settings.video_codec == "h265":
+        codec_args = [
+            "-c:v", "libx265", "-preset", "ultrafast", "-tune", "zerolatency",
+            # ★repeat-headers=1必須(H.264と同じ理由): RXは毎回TXの途中から視聴を始めるため、
+            # キーフレームごとにVPS/SPS/PPSを付けないと途中から復号できない。
+            # log-level=warningはx265の起動時infoログでTXログが埋まるのを防ぐ。
+            "-x265-params", "repeat-headers=1:strict-cbr=1:log-level=warning",
+        ]
+    else:
+        codec_args = [
+            "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+            # ★repeat-headers=1必須: これがないとx264はSPS/PPSをエンコード開始時に
+            # 1回しか出さない。RXは毎回TXの途中から視聴を始める(FIFOが先に開かれる保証も
+            # ない)ため、その最初の1回を確実に逃し、以降デコーダが"non-existing PPS/SPS
+            # referenced"を出し続けて一切復号できなくなる不具合が実機で確認された。
+            "-x264-params", "nal-hrd=cbr:force-cfr=1:repeat-headers=1",
+        ]
+    return codec_args + [
+        "-b:v", f"{video_kbps}k", "-maxrate", f"{video_kbps}k", "-bufsize", f"{video_kbps}k",
+        "-g", "30", "-pix_fmt", "yuv420p",
+    ]
+
+
 def _split_font_runs(text: str) -> list[tuple[str, bool]]:
     """textを(区間文字列, 日本語グリフが必要か)のリストへ分割する。"""
     runs: list[tuple[str, bool]] = []
@@ -895,14 +920,7 @@ class TxController(QtCore.QObject):
                 self.log_line.emit(f"[PTT] ESP32への送信開始通知に失敗しました: {exc}")
         args = video_args + overlay_input_args + _audio_input_args() + overlay_filter_args + [
             "-map", video_map, "-map", f"{audio_index}:a",
-            "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-            # ★repeat-headers=1必須: これがないとx264はSPS/PPSをエンコード開始時に
-            # 1回しか出さない。RXは毎回TXの途中から視聴を始める(FIFOが先に開かれる保証も
-            # ない)ため、その最初の1回を確実に逃し、以降デコーダが"non-existing PPS/SPS
-            # referenced"を出し続けて一切復号できなくなる不具合が実機で確認された。
-            "-x264-params", "nal-hrd=cbr:force-cfr=1:repeat-headers=1",
-            "-b:v", f"{video_kbps}k", "-maxrate", f"{video_kbps}k", "-bufsize", f"{video_kbps}k",
-            "-g", "30", "-pix_fmt", "yuv420p",
+        ] + _video_encoder_args(settings, video_kbps) + [
             # 16kbpsを左右2chで分け合うと音質が落ちるため、声の送信はモノラルに固定する。
             "-c:a", "aac", "-ac", "1", "-b:a", f"{audio_kbps}k",
             "-f", "mpegts", output_url,
@@ -1101,14 +1119,7 @@ class TxController(QtCore.QObject):
         args = platform_compat.camera_input_args(settings.camera_device) + overlay_input_args + \
             _audio_input_args() + overlay_filter_args + [
             "-map", video_map, "-map", f"{audio_index}:a",
-            "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-            # ★repeat-headers=1必須: これがないとx264はSPS/PPSをエンコード開始時に
-            # 1回しか出さない。RXは毎回TXの途中から視聴を始める(FIFOが先に開かれる保証も
-            # ない)ため、その最初の1回を確実に逃し、以降デコーダが"non-existing PPS/SPS
-            # referenced"を出し続けて一切復号できなくなる不具合が実機で確認された。
-            "-x264-params", "nal-hrd=cbr:force-cfr=1:repeat-headers=1",
-            "-b:v", f"{video_kbps}k", "-maxrate", f"{video_kbps}k", "-bufsize", f"{video_kbps}k",
-            "-g", "30", "-pix_fmt", "yuv420p",
+        ] + _video_encoder_args(settings, video_kbps) + [
             "-c:a", "aac", "-ac", "1", "-b:a", f"{audio_kbps}k", "-af", "ashowinfo",
             "-f", "mpegts", udp_ts_url,
         ]

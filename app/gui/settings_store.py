@@ -103,6 +103,9 @@ def supported_fec_rates(modulation: str) -> list[str]:
 SYMBOL_RATE_CANDIDATES_MSPS = [0.25, 0.333, 0.5, 0.666, 1.0, 2.0]
 
 TX_VIDEO_BITRATE_BPS = 400_000
+# 送信映像のコーデック(Pi5版と同じ)。h265は同じビットレートで画質が上がる代わりに
+# 符号化が重い(libx265のCPU符号化)。受信側はTSから自動判別する。
+VIDEO_CODECS = ("h264", "h265")
 TX_AUDIO_BITRATE_BPS = 16_000
 
 
@@ -221,6 +224,8 @@ class AppSettings:
     video_source: str = "colorbar"  # camera | file | colorbar
     video_file_path: str = ""
     use_color_bar_source: bool = True
+    # 送信映像のコーデック(VIDEO_CODECSのいずれか)。受信側はTSから自動判別する。
+    video_codec: str = "h264"
 
     # カメラ映像へ焼き込むオーバーレイ(shonan_lite-ipad版CameraOverlayRenderer相当)。
     # コールサイン(左上・大)+送信開始時の日時と備考(右下・小)。カラーバーには
@@ -324,6 +329,8 @@ def load() -> AppSettings:
             defaults["video_source"] = "colorbar"
         elif defaults.get("video_source") == "colorbar":
             defaults["use_color_bar_source"] = True
+        if defaults.get("video_codec") not in VIDEO_CODECS:
+            defaults["video_codec"] = AppSettings.video_codec
         # 選択肢から外した変調方式(16APSK等)で保存された設定はQPSKへ移行し、
         # FECもQPSKで使えない値なら既定値へ戻す。
         if defaults.get("modulation_scheme") not in MODULATION_SCHEMES:
