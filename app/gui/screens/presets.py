@@ -12,7 +12,7 @@ from i18n import tr
 
 _PRESET_FIELDS = (
     "selected_band", "use_custom_lo_frequency", "custom_lo_frequency_hz",
-    "pluto_uri", "symbol_rate_msps", "modulation_scheme", "fec_rate",
+    "pluto_uri", "symbol_rate_msps", "modulation_scheme", "fec_rate", "fec_auto",
     "rx_gain_db", "rx_agc_enabled", "tx_power_db", "video_source",
     "video_file_path", "use_color_bar_source",
     "camera_device", "overlay_callsign", "overlay_note",
