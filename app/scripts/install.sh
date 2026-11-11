@@ -277,6 +277,16 @@ else
       echo "gr-dvbs2rx_pi5_bringup.patchは適用済みか対象外のためスキップします。"
     fi
   fi
+  # ★V2: 16APSK/32APSKの受信(xfecframe_demapper_cbへのAPSK軟判定・振幅正規化・
+  # デインターリーブの追加)。上のbringupパッチを当てた後のソースに対するパッチ。
+  APSK_PATCH="$INSTALL_DIR/app/docs/patches/gr-dvbs2rx_apsk.patch"
+  if [ -f "$APSK_PATCH" ]; then
+    if git -C "$GR_DVBS2RX_BUILD_DIR" apply --check "$APSK_PATCH" 2>/dev/null; then
+      git -C "$GR_DVBS2RX_BUILD_DIR" apply "$APSK_PATCH"
+    else
+      echo "gr-dvbs2rx_apsk.patchは適用済みか対象外のためスキップします。"
+    fi
+  fi
 
   (
     mkdir -p "$GR_DVBS2RX_BUILD_DIR/build"

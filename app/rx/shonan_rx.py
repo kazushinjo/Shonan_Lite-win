@@ -23,44 +23,20 @@ import time
 
 from gnuradio import gr, analog, blocks, iio, dvbs2rx
 
-
-class _StdoutSink(gr.sync_block):
-    """復調後TSを標準出力(バイナリ)へそのまま書き出す軽量シンクブロック。
-
-    Windows版GUI(gui/backend.py RxController._start_windows_rx_pipeline)は
-    mkfifo/setsidが無いため、FIFOではなく`QProcess.setStandardOutputProcess()`
-    でこのプロセスの標準出力を表示用ffmpegの標準入力へ直結する
-    (`shonan_rx.py | ffmpeg`をQt経由で行うのと同義)。--output-fifo同様、
-    書き込み先(ffmpeg側)が先に終了するとBrokenPipeErrorになりうるため、
-    その場合は例外を飲み込んでシンプルに以降の書き込みを止める。
-    """
-
-    def __init__(self):
-        gr.sync_block.__init__(
-            self, name="stdout_sink",
-            in_sig=[gr.sizeof_char], out_sig=None)
-        self._stdout = sys.stdout.buffer
-        self._closed = False
-
-    def work(self, input_items, output_items):
-        n = len(input_items[0])
-        if not self._closed:
-            try:
-                self._stdout.write(bytes(input_items[0]))
-                self._stdout.flush()
-            except (BrokenPipeError, OSError):
-                self._closed = True
-        return n
-
-# 送信側と同じ信号をRXで受けるため、対応するconstellation/code_rateのみをサポートする。
+# DVB-S2ロングフレームの全28 MOD-COD(GUIのsettings_store.MODULATION_FEC_RATESと同じ内容)。
+# 16/32APSKはV2のパッチ(docs/patches/gr-dvbs2rx_apsk.patch)を当てたgr-dvbs2rxが必要。
+_MODCOD_FEC_RATES = {
+    "QPSK": ["1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10"],
+    "8PSK": ["3/5", "2/3", "3/4", "5/6", "8/9", "9/10"],
+    "16APSK": ["2/3", "3/4", "4/5", "5/6", "8/9", "9/10"],
+    "32APSK": ["3/4", "4/5", "5/6", "8/9", "9/10"],
+}
 # 第3・4要素はdvbs2rx.dvbs2_pls()に渡す文字列(dvbs2rx.paramsのAPI表記に合わせる)。
 _MODCOD_TABLE = {
-    "QPSK-S_1/2": (dvbs2rx.MOD_QPSK, dvbs2rx.C1_2, "QPSK", "1/2"),
-    "QPSK-S_3/5": (dvbs2rx.MOD_QPSK, dvbs2rx.C3_5, "QPSK", "3/5"),
-    "QPSK-S_8/9": (dvbs2rx.MOD_QPSK, dvbs2rx.C8_9, "QPSK", "8/9"),
-    "8PSK-S_3/5": (dvbs2rx.MOD_8PSK, dvbs2rx.C3_5, "8PSK", "3/5"),
-    "8PSK-S_8/9": (dvbs2rx.MOD_8PSK, dvbs2rx.C8_9, "8PSK", "8/9"),
-    "16APSK-S_8/9": (dvbs2rx.MOD_16APSK, dvbs2rx.C8_9, "16APSK", "8/9"),
+    f"{modulation}-S_{rate}": (getattr(dvbs2rx, f"MOD_{modulation}"),
+                                getattr(dvbs2rx, "C" + rate.replace("/", "_")),
+                                modulation, rate)
+    for modulation, rates in _MODCOD_FEC_RATES.items() for rate in rates
 }
 
 

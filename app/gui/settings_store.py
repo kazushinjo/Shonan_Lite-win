@@ -40,19 +40,22 @@ BAND_PROFILES = {
 }
 
 FEC_RATES = ["1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10"]
-# ★32APSKはTX_SUPPORTED_MODCODSに対応するFECが1つもない(実装なし)ため、
-# 選択肢自体から除外する(選んでも必ず「未対応のMod-Cod組み合わせ」になるため)。
-# 16APSKも運用対象外とし、選択肢・対応MOD-CODの両方から外した。
-MODULATION_SCHEMES = ["QPSK", "8PSK"]
+MODULATION_SCHEMES = ["QPSK", "8PSK", "16APSK", "32APSK"]
 
-# aff3ct(以前のTX実装)とgr-dvbs2rx(RX、app/rx/shonan_rx.pyの_MODCOD_TABLE)が
-# 実際に実装しているMOD-CODのみ。以前はMODULATION_FEC_RATES(ETSI規格上の全組み
-# 合わせ)からTX_SUPPORTED_MODCODSを機械的に生成しており、未実装の組み合わせ
-# (QPSK-S_1/2以外)まで「対応済み」としてすり抜けていた(開始時のガードは通るが
-# shonan_rx.py側の--mod-cod choicesで拒否されエラーになる不具合があった)。
+# DVB-S2(ETSI EN 302 307-1)のロングフレームで定義されている全28 MOD-COD。
+# ★送信はPlutoのpluto_dvb(無印Pluto v0.39のソフト変調、Pluto+ FPGA版のDVB-S2回路の
+# どちらも全組み合わせに対応)、受信はgr-dvbs2rx(16/32APSKはV2のパッチ
+# docs/patches/gr-dvbs2rx_apsk.patchで追加)。pi5/rx/shonan_rx.pyの_MODCOD_FEC_RATESは
+# これと同じ内容にすること(tests/test_settings_store.pyで照合している)。
+MODULATION_FEC_RATES = {
+    "QPSK": ["1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10"],
+    "8PSK": ["3/5", "2/3", "3/4", "5/6", "8/9", "9/10"],
+    "16APSK": ["2/3", "3/4", "4/5", "5/6", "8/9", "9/10"],
+    "32APSK": ["3/4", "4/5", "5/6", "8/9", "9/10"],
+}
 TX_SUPPORTED_MODCODS = [
-    "QPSK-S_1/2", "QPSK-S_3/5", "QPSK-S_8/9",
-    "8PSK-S_3/5", "8PSK-S_8/9",
+    f"{modulation}-S_{rate}"
+    for modulation, rates in MODULATION_FEC_RATES.items() for rate in rates
 ]
 RX_SUPPORTED_MODCODS = list(TX_SUPPORTED_MODCODS)
 

@@ -2,10 +2,10 @@
 
 ## 主な機能 / Features
 
-- **DVB-S2 DATV送信 / DVB-S2 DATV transmission**: 周波数・シンボルレート・FEC(1/4〜9/10)・変調方式
-  (QPSK/8PSK)・TX出力を画面から設定して送信。カメラ/キャプチャ
+- **DVB-S2 DATV送信 / DVB-S2 DATV transmission**: 周波数・シンボルレート・FEC・変調方式
+  (DVB-S2の全28組み合わせ: QPSK 1/4〜9/10、8PSK 3/5〜9/10、16APSK 2/3〜9/10、32APSK 3/4〜9/10)・TX出力を画面から設定して送信。カメラ/キャプチャ
   またはテストパターン映像を送出できる。  
-  Set the frequency, symbol rate, FEC (1/4 to 9/10), modulation (QPSK/8PSK) and TX power
+  Set the frequency, symbol rate, FEC and modulation (all 28 DVB-S2 MOD-CODs: QPSK 1/4-9/10, 8PSK 3/5-9/10, 16APSK 2/3-9/10, 32APSK 3/4-9/10) and TX power
   on screen and transmit. A camera/capture device or a test pattern can be sent.
 - **DVB-S2 DATV受信 / DVB-S2 DATV reception**: GNU Radio(gr-dvbs2rx)によるオンデバイス復調。LOCK状態・
   実測ビットレート・パケット数/エラー数をリアルタイム表示。  
@@ -195,8 +195,8 @@ The shortest procedure to check transmission and reception on a Windows PC by lo
 
 ### 事前準備 / Preparation
 
-- Plutoはファームウェアv0.32-dirtyを用意する。  
-  Prepare a Pluto with firmware v0.32-dirty.
+- Plutoはファームウェアdatvplutofrm v0.39-dirty(Pluto+ではShonan版ファーム)を用意する。  
+  Prepare a Pluto with firmware datvplutofrm v0.39-dirty (or the Shonan firmware on a Pluto+).
 - PlutoのTX端子とRX端子の間に40dBのアッテネータを接続する。  
   Connect a 40 dB attenuator between the Pluto's TX and RX ports.
 
@@ -244,8 +244,8 @@ TX and RX are used one at a time, not simultaneously).
 
 ### 事前準備 / Preparation
 
-Pluto(ファームウェアv0.32-dirty)を、次のどちらかでPCとつなぐ。  
-Connect the Pluto (firmware v0.32-dirty) to the PC in one of the following ways.
+Pluto(ファームウェアv0.39-dirty、またはPluto+のShonan版)を、次のどちらかでPCとつなぐ。  
+Connect the Pluto (firmware v0.39-dirty, or the Shonan firmware on a Pluto+) to the PC in one of the following ways.
 
 - USB-イーサネットアダプタで接続する(アダプタの電源を忘れずにつなぐ)。  
   With a USB-Ethernet adapter (don't forget to connect its power).
