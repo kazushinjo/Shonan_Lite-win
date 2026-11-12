@@ -502,6 +502,20 @@ def _read_pluto_rx_sample_rate_hz(settings: AppSettings) -> Optional[int]:
     return value if value > 0 else None
 
 
+def _pluto_callsign(settings: AppSettings) -> str:
+    """Plutoのsettings.txtへ書くコールサイン(送信TSのSDTサービス名になる)。
+
+    映像オーバーレイ用のコールサインを使う。udpts.shはsettings.txtの値を空白で区切り
+    引用符なしでtsp/ffmpegの引数に渡すため、英数字と「/」「-」が残る最初の語を
+    大文字で使う(最大20文字)。無ければNOCALL(空だとtspが即終了し送信されない)。
+    """
+    for word in (settings.overlay_callsign or "").split():
+        call = re.sub(r"[^A-Z0-9/-]", "", word.upper())[:20]
+        if call:
+            return call
+    return "NOCALL"
+
+
 def _push_pluto_settings(settings: AppSettings, lo_hz: float) -> None:
     """Pluto+の`/save.php`へDVB-S2パラメータをPOSTし、`/www/settings.txt`を書き換える。
 
@@ -519,7 +533,7 @@ def _push_pluto_settings(settings: AppSettings, lo_hz: float) -> None:
     fec_field = settings.fec_rate.replace("/", "")
     power = str(int(settings.tx_power_db))
     data = urllib.parse.urlencode({
-        "callsign": "NOCALL", "freq": str(freq_mhz), "channel": "Custom",
+        "callsign": _pluto_callsign(settings), "freq": str(freq_mhz), "channel": "Custom",
         "mode": "DVBS2", "mod": settings.modulation_scheme,
         "sr": str(symbol_rate_ksps), "srselect": "2000", "fec": fec_field,
         # 実機のpluto_dvb経路ではパイロットONの方がBBHEADER CRCエラーが
