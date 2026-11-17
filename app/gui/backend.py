@@ -502,6 +502,27 @@ def _read_pluto_rx_sample_rate_hz(settings: AppSettings) -> Optional[int]:
     return value if value > 0 else None
 
 
+def _set_pluto_tx_lo_powerdown(settings: AppSettings, down: bool) -> Optional[str]:
+    """Plutoの送信LO(altvoltage1)を止める(down=True)/入れる(down=False)。失敗したら理由を返す。
+
+    ★Pluto+ FPGA版などは、送信(ffmpeg)を止めてもPlutoのpluto_dvbが動き続け、電波が
+    出たままになる(2026-11-18、Shonan_Lite-RasPI5-SDRの実機で確認)。送信停止で送信LOを止め、
+    送信開始で入れ直す。
+    """
+    try:
+        result = subprocess.run(
+            [platform_compat.find_binary("iio_attr"), "-u", settings.pluto_uri, "-c", "ad9361-phy",
+             "altvoltage1", "powerdown", "1" if down else "0"],
+            capture_output=True, text=True, timeout=5,
+            **platform_compat.no_window_kwargs(),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return str(exc)
+    if result.returncode != 0:
+        return (result.stderr or result.stdout or f"rc={result.returncode}").strip()
+    return None
+
+
 def _pluto_callsign(settings: AppSettings) -> str:
     """Plutoのsettings.txtへ書くコールサイン(送信TSのSDTサービス名になる)。
 
@@ -927,6 +948,10 @@ class TxController(QtCore.QObject):
                 self.error.emit(f"Pluto設定送信に失敗しました: {exc}")
                 return
             output_url = _build_udp_ts_url(settings)
+            # 送信停止で止めた送信LOを入れ直す(止めたままだと電波が出ない)
+            lo_error = _set_pluto_tx_lo_powerdown(settings, False)
+            if lo_error:
+                self.log_line.emit(f"[TX] 送信LOを入れられませんでした: {lo_error}")
         if settings.ptt_controller_host:
             try:
                 _send_ptt_request(settings.ptt_controller_host, "on")
@@ -954,6 +979,14 @@ class TxController(QtCore.QObject):
                 self.log_line.emit(f"[PTT] ESP32への送信終了通知に失敗しました: {exc}")
         if not was_running:
             return
+        # ★Plutoの中のpluto_dvbは送信を止めても動き続けるので、送信LOを止めて電波を止める
+        # (GUIを止めないよう別スレッドで。次の送信開始で入れ直す)。
+        last = self._last_settings
+        if last is not None and not last.is_loopback():
+            def _powerdown(settings=last):
+                error = _set_pluto_tx_lo_powerdown(settings, True)
+                print(f"[TX] Pluto TX LO powerdown: {'OK' if not error else error}", flush=True)
+            threading.Thread(target=_powerdown, daemon=True).start()
         # ffmpegを直接起動している(setsid/bash -cのパイプ構成をやめた)ため、QProcessの
         # terminate()/kill()がそのままffmpeg本体に届く。
         if platform_compat.IS_WINDOWS:
